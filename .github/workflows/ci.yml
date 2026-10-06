@@ -88,9 +88,28 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: uv venv .venv-demucs --python 3.12
-      - name: Install CPU-only PyTorch and optional backend
+      - run: uv sync --locked --dev --python 3.12
+      - name: Test locked Demucs dependencies with the matching CPU PyTorch build
         run: |
-          uv pip install --python .venv-demucs/bin/python "torch==2.8.0+cpu" --index-url https://download.pytorch.org/whl/cpu
-          uv pip install --python .venv-demucs/bin/python -e ".[demucs]" pytest
-      - run: .venv-demucs/bin/python -m pytest -m demucs_runtime
+          uv export --locked --extra demucs --no-dev --no-hashes --no-annotate --no-emit-project -o /tmp/demucs-full.txt
+          uv export --locked --extra demucs --no-dev --no-hashes --no-emit-project --prune torch -o /tmp/demucs-cpu.txt
+          .venv/bin/python - <<'PY'
+          import subprocess
+          from pathlib import Path
+          from packaging.requirements import Requirement
+
+          candidates = []
+          for line in Path("/tmp/demucs-full.txt").read_text().splitlines():
+              if line.startswith("torch=="):
+                  requirement = Requirement(line)
+                  if requirement.marker is None or requirement.marker.evaluate():
+                      candidates.append(next(iter(requirement.specifier)).version)
+          assert len(candidates) == 1, candidates
+          subprocess.run([
+              "uv", "pip", "install", "--python", ".venv/bin/python",
+              f"torch=={candidates[0]}+cpu", "--index-url", "https://download.pytorch.org/whl/cpu",
+          ], check=True)
+          PY
+          uv pip install --python .venv/bin/python --no-deps -r /tmp/demucs-cpu.txt
+          uv pip check --python .venv/bin/python
+      - run: .venv/bin/python -m pytest -m demucs_runtime

@@ -69,6 +69,18 @@ For automatic stem separation:
 uv sync --locked --extra plot --extra demucs
 ```
 
+Keep the extra enabled when running a stem-based project:
+
+```bash
+uv run --locked --extra demucs beatbloom preview video.mp4 --audio music.wav --config examples/visualizers-demucs.json
+```
+
+If you see `Numpy is not available` or `_ARRAY_API not found`, update the project's
+dependency files and rerun `uv sync --locked --extra demucs`. Older lockfiles could
+select PyTorch 2.2 with NumPy 2 on Linux. The Demucs extra now requires PyTorch 2.8+
+except on Intel macOS, where upstream requires PyTorch 2.2 and NumPy 1.26 (Python
+3.10–3.12). The backend checks NumPy interoperability before loading a model.
+
 With pip in a virtual environment, clone the repository and run:
 
 ```bash

@@ -37,7 +37,11 @@ dependencies = [
 
 [project.optional-dependencies]
 plot = ["matplotlib>=3.8,<4"]
-demucs = ["demucs>=4.1,<5"]
+demucs = [
+  "demucs>=4.1,<5",
+  # Intel macOS still uses Demucs' torch<2.3 / numpy<2 fallback.
+  "torch>=2.8,<3; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+]
 
 [project.scripts]
 beatbloom = "beatbloom.cli:entrypoint"

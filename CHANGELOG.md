@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed
+
+- Require NumPy-compatible PyTorch for the optional Demucs backend on Linux,
+  Windows and Apple Silicon; retain the upstream Intel macOS NumPy 1 fallback.
+- Refresh the lockfile's platform-specific PyTorch choices. The Demucs CI test
+  now uses the locked NumPy/Demucs versions and the matching CPU PyTorch build.
+- Check both NumPy/PyTorch conversions before loading a model, with an actionable
+  dependency error when the array bridge is unavailable.
+
 ### Added
 
 - Preparatory standalone HTML editor with schema-driven controls, synthetic

@@ -4,7 +4,9 @@ import importlib.metadata
 import json
 import random
 import shutil
+import sys
 from pathlib import Path
+from types import ModuleType
 
 import numpy as np
 import pytest
@@ -117,6 +119,42 @@ def test_missing_extra_has_actionable_error(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr("beatbloom.separation.demucs.version", missing)
     with pytest.raises(BeatBloomError, match="uv sync --extra demucs"):
         DemucsBackend().versions()
+
+
+@pytest.mark.parametrize("direction", ["from_numpy", "numpy"])
+def test_broken_numpy_bridge_fails_before_loading_a_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, direction: str
+) -> None:
+    torch = ModuleType("torch")
+    torch.__version__ = "2.2.2"  # type: ignore[attr-defined]
+    api = ModuleType("demucs.api")
+
+    class Tensor:
+        def numpy(self) -> np.ndarray:
+            if direction == "numpy":
+                raise RuntimeError("Numpy is not available")
+            return np.zeros(1, dtype=np.float32)
+
+    def from_numpy(_value: np.ndarray) -> Tensor:
+        if direction == "from_numpy":
+            raise RuntimeError("Numpy is not available")
+        return Tensor()
+
+    def forbidden(**_kwargs: object) -> None:
+        pytest.fail("a broken NumPy bridge must fail before constructing a model")
+
+    torch.from_numpy = from_numpy  # type: ignore[attr-defined]
+    api.Separator = forbidden  # type: ignore[attr-defined]
+    api.LoadModelError = RuntimeError  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    monkeypatch.setitem(sys.modules, "demucs", ModuleType("demucs"))
+    monkeypatch.setitem(sys.modules, "demucs.api", api)
+    before = random.getstate()
+    with pytest.raises(
+        BeatBloomError, match=r"PyTorch 2\.2\.2.*NumPy.*uv sync --locked --extra demucs"
+    ):
+        DemucsBackend().separate(tmp_path / "unused.wav", tmp_path, SeparationConfig())
+    assert random.getstate() == before
 
 
 @pytest.mark.integration

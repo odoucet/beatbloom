@@ -33,6 +33,14 @@ class DemucsBackend:
             from demucs.api import LoadModelError, Separator
         except (ImportError, OSError) as exc:
             raise BeatBloomError(f"Cannot import Demucs/PyTorch: {exc}") from exc
+        try:
+            # Probe both conversions before loading/downloading a separation model.
+            torch.from_numpy(np.zeros(1, dtype=np.float32)).numpy()
+        except (RuntimeError, TypeError) as exc:
+            raise BeatBloomError(
+                f"PyTorch {torch.__version__} cannot exchange arrays with NumPy {np.__version__}. "
+                "Update BeatBloom's dependency files, then run: uv sync --locked --extra demucs"
+            ) from exc
         device = config.device
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
