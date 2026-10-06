@@ -1,22 +1,38 @@
 {
-  "schema_version": 1,
-  "bands": [
-    {
-      "name": "global_energy",
+  "schema_version": 2,
+  "signals": {
+    "global_energy": {
       "feature": "loudness",
       "attack_ms": 300,
-      "release_ms": 1600,
-      "brightness": [0.88, 1.03]
+      "release_ms": 1600
     },
-    {
-      "name": "low_pulse",
+    "low_pulse": {
       "low": 40,
       "high": 120,
       "feature": "rms",
       "attack_ms": 15,
       "release_ms": 200,
-      "gate": 0.25,
-      "effects": {"zoom": 0.004, "bloom": 0.15}
+      "gate": 0.25
+    }
+  },
+  "effects": [
+    {
+      "signal": "global_energy",
+      "effect": "brightness",
+      "range": [
+        0.88,
+        1.03
+      ]
+    },
+    {
+      "signal": "low_pulse",
+      "effect": "zoom",
+      "amount": 0.004
+    },
+    {
+      "signal": "low_pulse",
+      "effect": "bloom",
+      "amount": 0.15
     }
   ]
 }

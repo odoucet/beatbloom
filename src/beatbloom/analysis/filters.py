@@ -5,11 +5,11 @@ from __future__ import annotations
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
 
-from beatbloom.config import NYQUIST, SAMPLE_RATE, BandConfig
+from beatbloom.config import NYQUIST, SAMPLE_RATE, SignalConfig
 from beatbloom.models import FloatArray
 
 
-def filter_band(samples: FloatArray, band: BandConfig) -> FloatArray:
+def filter_band(samples: FloatArray, band: SignalConfig) -> FloatArray:
     """Apply a fourth-order Butterworth filter, including short and edge-band inputs."""
     low = band.low or 0.0
     high = band.high if band.high is not None else NYQUIST

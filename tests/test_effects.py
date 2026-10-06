@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from beatbloom.config import BandConfig, ProjectConfig
+from beatbloom.config import EffectConfig, ProjectConfig, SignalConfig
 from beatbloom.models import EffectParameters, Signal
 from beatbloom.render.effects import apply_effects, parameters_at
 
@@ -46,14 +46,21 @@ def test_tiny_frame_with_all_effects_is_finite_and_clipped() -> None:
 
 def test_mapping_adds_effects_and_multiplies_brightness() -> None:
     config = ProjectConfig(
-        bands=(
-            BandConfig(name="a", effects={"bloom": 2.0}, brightness=(0.4, 1.0)),
-            BandConfig(name="b", effects={"bloom": 1.0}, brightness=(0.5, 1.0)),
+        schema_version=2,
+        signals={"a": SignalConfig(), "b": SignalConfig()},
+        effects=(
+            EffectConfig(signal="a", effect="bloom", amount=2.0),
+            EffectConfig(signal="b", effect="bloom", amount=1.0),
+            EffectConfig(signal="a", effect="brightness", range=(0.4, 1.0)),
+            EffectConfig(signal="b", effect="brightness", range=(0.5, 1.0)),
+        ),
+    )
+    signals = {
+        name: Signal(
+            name, np.array([0.5, 0.5], dtype=np.float32), np.array([0, 1], dtype=np.float64), 2.0
         )
-    )
-    signals = tuple(
-        Signal(name, np.array([0.5, 0.5], dtype=np.float32), 1.0, 2.0) for name in ("a", "b")
-    )
+        for name in ("a", "b")
+    }
     result = parameters_at(config, signals, 0.0)
     assert result.bloom == 1.5
     assert result.brightness == pytest.approx(0.7 * 0.75)

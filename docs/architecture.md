@@ -1,42 +1,82 @@
 # Architecture
 
-The v0.1 package has three boundaries: validated configuration, named analysis
-signals and video rendering. No module starts work when imported.
+BeatBloom v0.2 separates configuration, cached audio processing and rendering.
+Importing a module does not start processing or load a separation model.
 
 | Module | Responsibility |
 | --- | --- |
-| `cli.py` | Argument parsing, logging and actionable exit codes |
-| `config.py` | Pydantic configuration validation and relative source resolution |
-| `models.py` | Typed audio, video, signal, effect and render structures |
-| `media.py` | FFmpeg discovery, probing, audio decoding and child cleanup |
+| `cli.py` | Arguments, lazy command dispatch, logging and exit codes |
+| `config.py` | Schema v2, cross-field validation and relative source paths |
+| `models.py` | Typed media, timestamped series and render structures |
+| `media.py` | FFmpeg discovery, metadata, mono/stereo decoding and process cleanup |
+| `cache.py` | SHA256 identities, file locks and staged atomic publication |
+| `separation/base.py` | Injectable backend protocol and cached stem result |
+| `separation/demucs.py` | Lazy Demucs API, device selection and float32 WAV output |
+| `separation/cache.py` | Separation keys and validated reuse of all model stems |
 | `analysis/filters.py` | Frequency isolation |
+| `analysis/features.py` | Native 256-sample onset/RMS extraction |
 | `analysis/envelopes.py` | Normalization, gate, gamma and attack/release |
-| `analysis/features.py` | Complete-track onset/RMS analysis and source reuse |
-| `render/effects.py` | Per-frame mapping and OpenCV effects on float32 RGB |
-| `render/engine.py` | Excerpt selection, pipe lifecycle, encoding and atomic output |
+| `analysis/cache.py` | Validated NPZ payloads and manifests |
+| `analysis/pipeline.py` | Shared source resolution and two-level analysis cache |
+| `render/effects.py` | Named mappings and OpenCV effects on float32 RGB |
+| `render/engine.py` | Timeline, FFmpeg pipes and atomic video output |
+| `preview.py` | ffplay lifecycle |
 | `plot.py` | Optional headless diagnostics |
 
-The renderer receives named `Signal` objects and uses `signal.at(timestamp)`.
-It does not load stems or extract features inside the frame loop. Mapping
-is separate from image processing even though schema v1 stores mappings in
-each band, matching the original script.
+## Cached audio processing
 
-The original audio mix controls the output timeline. `--drive` and per-band
-`source` files only control reactions. Every signal is normalized over its
-own full source track before the renderer selects an excerpt. Fractional
-video rates are carried as `Fraction` objects and passed to FFmpeg exactly.
+`separate` calls the separation stage. `analyze` calls the common analysis
+pipeline. Both `preview` and `render` call that same pipeline before encoding.
+Signals resolve to existing source files, the original mix/default drive, or
+cached Demucs stems. Model and Torch imports happen only on a separation miss.
+Package versions are read through distribution metadata without loading Torch.
 
-FFmpeg decodes input video into raw RGB frames. OpenCV applies effects on
-float32 data; a second FFmpeg process encodes H.264 and muxes the original
-music as AAC. Stderr is written to temporary files to avoid pipe deadlocks.
-Both processes are checked, terminated if needed and reaped on every exit
-path. Final video output is replaced only after successful encoding.
+The separation key includes the original file hash, backend versions and model
+options. All stems are committed together; choosing another stem reuses that
+separation. Raw feature keys include the actual source hash, frequency filter,
+feature kind, native grid, algorithm version and NumPy/SciPy/Librosa versions.
+RMS and loudness share raw RMS data. Normalized envelope keys additionally
+include gate, gamma, percentile and smoothing settings.
 
-v0.1 retains frame-rate-dependent envelope sampling for compatibility with
-the prototype. v0.2 will move cached features to their own timestamp grid,
-separate signal definitions from mapping, and add automatic source resolution.
-Those additions can reuse the signal interface and effect renderer.
+Visual mappings and all video options are excluded from analysis keys. Signal
+names link cached envelopes through a small analysis manifest. Every cached
+series is validated for shape, type, finite values and increasing timestamps;
+manifest hashes detect payload corruption. NPZ loading forbids pickle. Stem
+manifests verify hashes, stereo rate, float format and aligned lengths.
 
-The integration tests generate tiny media fixtures with FFmpeg. They verify
-actual visual changes, original audio muxing, excerpts, resize, plots,
-missing sources and preservation of existing output after an encoder error.
+Cache files are produced in a temporary directory on the cache filesystem,
+then published under a per-key cross-process lock. Refresh keeps the previous
+entry until its replacement is complete. Locks are always acquired from
+signal to feature; separation completes before signal processing begins.
+
+Full-track audio is decoded only on extraction misses (or explicitly for
+plots). Warm runs hash source files and probe the soundtrack duration; unusual
+files without reliable duration metadata may require decoding that mix.
+Persistent artifacts live under `stems/`, `features/`, `signals/`, `analysis/`
+and `locks/` in the configured user cache root.
+
+## Rendering and preview
+
+`Signal.at(timestamp)` linearly interpolates native audio timestamps. The frame
+loop only maps signals and processes pixels. Full-track normalization remains
+identical for a preview and final render, regardless of FPS or excerpt.
+The original mix controls audio timing. All sources must align at time zero.
+
+FFmpeg decodes raw RGB frames at the chosen rational CFR. OpenCV applies
+reactive effects; another FFmpeg process grades, encodes H.264 and muxes the
+original mix as AAC. File-backed stderr prevents pipe deadlocks. Both children
+are checked, terminated when necessary and reaped on every exit path. The
+output replaces its target only after successful encoding.
+
+Preview uses the same renderer with shorter, smaller, lower-FPS defaults.
+A temporary directory exists throughout playback and is removed afterwards,
+including interruption. An explicit output persists. ffplay is checked before
+processing unless `--no-play` is selected.
+
+## Verification
+
+Synthetic tests cover content-based invalidation, corruption recovery,
+concurrency, failed refresh, source routing and mapping. Real FFmpeg tests
+check effects, soundtrack muxing, rational FPS, excerpts, resizing, plots,
+previews and output preservation. Optional backend tests run the real Demucs
+API with its tiny untrained test model, requiring no production weights.

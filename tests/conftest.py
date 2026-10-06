@@ -13,6 +13,13 @@ from beatbloom.config import SAMPLE_RATE
 from beatbloom.models import AudioTrack
 
 
+@pytest.fixture(autouse=True)
+def isolated_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "beatbloom.cache.user_cache_path", lambda *_args, **_kwargs: tmp_path / "cache"
+    )
+
+
 @pytest.fixture
 def track() -> AudioTrack:
     times = np.arange(SAMPLE_RATE * 2, dtype=np.float32) / SAMPLE_RATE

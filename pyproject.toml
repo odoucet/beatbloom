@@ -25,15 +25,19 @@ classifiers = [
   "Topic :: Multimedia :: Video",
 ]
 dependencies = [
+  "filelock>=3.16,<5",
   "librosa>=0.11,<0.12",
   "numpy>=1.26,<3",
   "opencv-python-headless>=4.10,<5",
+  "platformdirs>=4.3,<5",
   "pydantic>=2.10,<3",
   "scipy>=1.13,<2",
+  "soundfile>=0.13,<1",
 ]
 
 [project.optional-dependencies]
 plot = ["matplotlib>=3.8,<4"]
+demucs = ["demucs>=4.1,<5"]
 
 [project.scripts]
 beatbloom = "beatbloom.cli:entrypoint"
@@ -80,13 +84,13 @@ files = ["src/beatbloom"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["cv2", "cv2.*", "librosa", "librosa.*", "scipy", "scipy.*", "matplotlib", "matplotlib.*"]
+module = ["cv2", "cv2.*", "librosa", "librosa.*", "scipy", "scipy.*", "matplotlib", "matplotlib.*", "demucs", "demucs.*", "torch", "torch.*", "soundfile"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
-markers = ["integration: real FFmpeg decode/render/encode tests"]
+markers = ["integration: real FFmpeg decode/render/encode tests", "demucs_runtime: optional real PyTorch and Demucs API smoke test without model downloads"]
 filterwarnings = ["error", "ignore:.*aifc.*deprecated.*:DeprecationWarning", "ignore:.*audioop.*deprecated.*:DeprecationWarning", "ignore:.*sunau.*deprecated.*:DeprecationWarning"]
 
 [tool.coverage.run]

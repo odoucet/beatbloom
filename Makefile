@@ -1,8 +1,9 @@
 .DEFAULT_GOAL := help
-.PHONY: help install lint format typecheck test check build lock clean
+.PHONY: help install install-demucs lint format typecheck test check build lock clean
 
 help:
 	@echo "install    Sync development dependencies and optional plots"
+	@echo "install-demucs  Also install optional Demucs/PyTorch"
 	@echo "format     Format Python and apply safe Ruff fixes"
 	@echo "check      Run lint, strict typing and all tests"
 	@echo "test       Run unit and FFmpeg integration tests"
@@ -11,7 +12,10 @@ help:
 	@echo "clean      Remove generated caches and build outputs"
 
 install:
-	uv sync --locked --all-extras --dev
+	uv sync --locked --extra plot --dev
+
+install-demucs:
+	uv sync --locked --extra plot --extra demucs --dev
 
 format:
 	uv run ruff check --fix .

@@ -18,17 +18,23 @@ pytestmark = pytest.mark.integration
 
 
 def write_config(root: Path, *, source: str | None = None) -> Path:
-    band: dict[str, object] = {
-        "name": "energy",
+    signal: dict[str, object] = {
         "feature": "rms",
         "attack_ms": 0,
         "release_ms": 0,
-        "effects": {"exposure": 0.5},
     }
     if source is not None:
-        band["source"] = source
-    path = root / "bands.json"
-    path.write_text(json.dumps({"bands": [band]}))
+        signal["source"] = source
+    path = root / "project.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "signals": {"energy": signal},
+                "effects": [{"signal": "energy", "effect": "exposure", "amount": 0.5}],
+            }
+        )
+    )
     return path
 
 
@@ -89,7 +95,7 @@ def test_real_render_with_audio_effects_resize_and_excerpt(
     assert video_pixels(output).mean() > video_pixels(video).mean() * 1.25
 
 
-def test_per_band_source_and_original_audio_mux(
+def test_signal_source_and_original_audio_mux(
     media_files: tuple[Path, Path], tmp_path: Path
 ) -> None:
     video, audio = media_files
@@ -316,3 +322,78 @@ def test_interrupt_preserves_output_and_cleans_children_and_temporary_file(
     )
     assert output.read_bytes() == b"keep previous output"
     assert not list(tmp_path.glob(".interrupted-*.mp4"))
+
+
+def test_preview_without_player_has_requested_fps_and_original_audio(
+    media_files: tuple[Path, Path], tmp_path: Path
+) -> None:
+    video, audio = media_files
+    output = tmp_path / "preview.mp4"
+    assert (
+        main(
+            [
+                "preview",
+                str(video),
+                "--audio",
+                str(audio),
+                "--config",
+                str(write_config(tmp_path)),
+                "--start",
+                "0.2",
+                "--duration",
+                "0.4",
+                "--size",
+                "80x60",
+                "--no-play",
+                "-o",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    info = probe_video(output)
+    assert info.fps == Fraction(15)
+    assert (info.width, info.height) == (80, 60)
+    assert info.duration == pytest.approx(0.4, abs=0.01)
+    from beatbloom.media import load_audio
+
+    assert np.max(np.abs(load_audio(output).samples)) > 0.05
+
+
+def test_render_settings_reuse_analysis_from_analyze_command(
+    media_files: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    video, audio = media_files
+    config = write_config(tmp_path)
+    cache = tmp_path / "cache"
+    assert main(["analyze", str(audio), "--config", str(config), "--cache-dir", str(cache)]) == 0
+    manifests = list((cache / "analysis").glob("*.json"))
+    assert len(manifests) == 1
+
+    def forbidden(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("warm render must reuse envelopes across all visual settings")
+
+    monkeypatch.setattr("beatbloom.analysis.pipeline.extract_features", forbidden)
+    monkeypatch.setattr("beatbloom.analysis.pipeline.load_audio", forbidden)
+    payload = json.loads(config.read_text())
+    payload["effects"][0]["amount"] = 0.9
+    config.write_text(json.dumps(payload))
+    result = render_video(
+        RenderOptions(
+            video,
+            audio,
+            tmp_path / "warm.mp4",
+            config=config,
+            cache_dir=cache,
+            fps=Fraction(30000, 1001),
+            start=0.5,
+            duration=0.2002,
+            size=(80, 60),
+            crf=24,
+            preset="ultrafast",
+            grade="eq=contrast=1.1",
+        )
+    )
+    assert result.frames == 6
+    assert probe_video(result.output).fps == Fraction(30000, 1001)
+    assert list((cache / "analysis").glob("*.json")) == manifests

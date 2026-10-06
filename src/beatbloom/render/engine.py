@@ -7,15 +7,23 @@ import math
 import os
 import subprocess
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 from typing import IO
 
 import numpy as np
 
-from beatbloom.analysis.features import analyze_bands
+from beatbloom.analysis.pipeline import analyze
 from beatbloom.config import ProjectConfig, load_config
 from beatbloom.errors import BeatBloomError
-from beatbloom.media import load_audio, probe_video, require_file, require_tools, stop_process
+from beatbloom.media import (
+    audio_duration,
+    load_audio,
+    probe_video,
+    require_file,
+    require_tools,
+    stop_process,
+)
 from beatbloom.models import RenderOptions, RenderResult, Signal, VideoInfo
 from beatbloom.render.effects import apply_effects, parameters_at
 
@@ -32,6 +40,8 @@ def _validate_options(options: RenderOptions, config: ProjectConfig) -> None:
         raise BeatBloomError("Duration must be a finite number > 0")
     if not 0 <= options.crf <= 51:
         raise BeatBloomError("CRF must be between 0 and 51")
+    if options.fps is not None and options.fps <= 0:
+        raise BeatBloomError("Frame rate must be positive")
     if options.size is not None and any(value < 2 or value % 2 for value in options.size):
         raise BeatBloomError("Output dimensions must be even numbers >= 2")
     if options.output.suffix.lower() not in VIDEO_SUFFIXES:
@@ -40,7 +50,11 @@ def _validate_options(options: RenderOptions, config: ProjectConfig) -> None:
     for path in (options.drive, options.config):
         if path is not None:
             inputs.add(path.resolve())
-    inputs.update(Path(band.source).resolve() for band in config.bands if band.source is not None)
+    inputs.update(
+        Path(signal.source).resolve()
+        for signal in config.signals.values()
+        if signal.source is not None
+    )
     for path in inputs:
         require_file(path, "Input")
     outputs = [options.output]
@@ -60,14 +74,16 @@ def _validate_options(options: RenderOptions, config: ProjectConfig) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def _render_duration(options: RenderOptions, video: VideoInfo, audio_duration: float) -> float:
+def _render_duration(
+    options: RenderOptions, video: VideoInfo, audio_duration: float, *, warn: bool = True
+) -> float:
     available_end = min(audio_duration, video.duration) if video.duration else audio_duration
     available = available_end - options.start
     if available <= 0:
         raise BeatBloomError(
             f"Start {options.start:g} s is outside the available audio/video ({available_end:g} s)"
         )
-    if options.duration is not None and options.duration > available:
+    if warn and options.duration is not None and options.duration > available:
         LOGGER.warning("Requested excerpt exceeds input duration; rendering %.3f s", available)
     return min(options.duration, available) if options.duration is not None else available
 
@@ -95,7 +111,7 @@ def _diagnostics(stream: IO[bytes]) -> str:
 def _encode(
     options: RenderOptions,
     config: ProjectConfig,
-    signals: tuple[Signal, ...],
+    signals: dict[str, Signal],
     video: VideoInfo,
     duration: float,
     temporary: Path,
@@ -105,7 +121,9 @@ def _encode(
         raise BeatBloomError("Input dimensions are odd; choose even output dimensions with --size")
     fps = str(video.fps)
     frame_count = math.ceil(duration * float(video.fps) - 1e-9)
-    filters = [f"fps={fps}"]
+    # A seek between source frames can leave a positive first PTS. Pad that
+    # gap so the raw stream starts at zero, as the encoder and audio expect.
+    filters = [f"fps={fps}:start_time=0"]
     if options.size is not None:
         filters.extend(
             [
@@ -244,20 +262,24 @@ def _encode(
     return frames
 
 
-def render_video(options: RenderOptions) -> RenderResult:
+def render_video(options: RenderOptions, config: ProjectConfig | None = None) -> RenderResult:
     """Render an excerpt using full-track normalization and the original audio mix."""
     require_tools()
-    config = load_config(options.config)
+    config = config if config is not None else load_config(options.config)
     _validate_options(options, config)
     video = probe_video(options.video)
-    audio = load_audio(options.audio)
-    duration = _render_duration(options, video, audio.duration)
-    signals = analyze_bands(
+    if options.fps is not None:
+        video = replace(video, fps=options.fps)
+    _render_duration(options, video, audio_duration(options.audio), warn=False)
+    analysis = analyze(
+        options.audio,
         config,
-        options.drive or options.audio,
-        float(video.fps),
-        tracks={options.audio.resolve(): audio},
+        drive=options.drive,
+        cache_dir=options.cache_dir,
+        refresh=options.refresh,
     )
+    signals = analysis.signals
+    duration = _render_duration(options, video, analysis.audio_duration)
     width, height = options.size or (video.width, video.height)
     LOGGER.info(
         "%sx%s @ %s fps; render %.3f -> %.3f s",
@@ -270,7 +292,7 @@ def render_video(options: RenderOptions) -> RenderResult:
     if options.plot is not None:
         from beatbloom.plot import save_plot
 
-        drive = load_audio(options.drive) if options.drive is not None else audio
+        drive = load_audio(options.drive or options.audio)
         save_plot(options.plot, drive, config, signals, options.start, duration, options.overwrite)
     descriptor, filename = tempfile.mkstemp(
         prefix=f".{options.output.stem}-", suffix=options.output.suffix, dir=options.output.parent

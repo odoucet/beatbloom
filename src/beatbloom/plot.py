@@ -22,7 +22,7 @@ def save_plot(
     path: Path,
     track: AudioTrack,
     config: ProjectConfig,
-    signals: tuple[Signal, ...],
+    signals: dict[str, Signal],
     start: float,
     duration: float,
     overwrite: bool = False,
@@ -66,16 +66,17 @@ def save_plot(
         spectrogram.set_yscale("log")
         spectrogram.set_ylim(20, track.sample_rate / 2)
         spectrogram.set_ylabel("Frequency (Hz)")
-        spectrogram.set_title("Default analysis source (per-band source files may differ)")
+        spectrogram.set_title("Default analysis source (individual signal sources may differ)")
         timestamps = np.linspace(start, start + duration, max(2, int(duration * 60) + 1))
-        for band, signal in zip(config.bands, signals, strict=True):
-            for cutoff in (band.low, band.high):
+        for name, definition in config.signals.items():
+            signal = signals[name]
+            for cutoff in (definition.low, definition.high):
                 if cutoff:
                     spectrogram.axhline(cutoff, ls="--", lw=1, color="white")
             envelopes.plot(
                 timestamps,
                 [signal.at(float(t)) for t in timestamps],
-                label=f"{band.name} ({band.feature})",
+                label=f"{name} ({definition.feature})",
             )
         envelopes.set_ylim(0, 1.05)
         envelopes.set_xlim(start, start + duration)
