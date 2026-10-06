@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "bands": [
+    {
+      "name": "piano_attaques",
+      "source": "../separated/htdemucs_6s/morceau/piano.wav",
+      "low": 400,
+      "high": 2000,
+      "feature": "onset",
+      "attack_ms": 10,
+      "release_ms": 250,
+      "gate": 0.35,
+      "gamma": 2.0,
+      "effects": {"bloom": 1.2, "exposure": 0.10, "saturation": 0.15}
+    },
+    {
+      "name": "melodie_souffle",
+      "source": "../separated/htdemucs_6s/morceau/other.wav",
+      "low": 200,
+      "high": 4000,
+      "feature": "rms",
+      "attack_ms": 120,
+      "release_ms": 900,
+      "gate": 0.10,
+      "gamma": 1.0,
+      "effects": {"bloom": 0.4, "saturation": 0.10}
+    },
+    {
+      "name": "kick",
+      "source": "../separated/htdemucs_6s/morceau/drums.wav",
+      "low": 40,
+      "high": 120,
+      "feature": "rms",
+      "attack_ms": 15,
+      "release_ms": 200,
+      "gate": 0.30,
+      "gamma": 1.5,
+      "effects": {"zoom": 0.006}
+    }
+  ]
+}

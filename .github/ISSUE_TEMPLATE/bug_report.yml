@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a reproducible problem
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal command and configuration
+      description: Remove private paths or media. Include a synthetic reproduction if possible.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions and platform
+      description: BeatBloom, Python, FFmpeg and operating system versions.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Diagnostic logs
+      description: Run with --verbose and remove any private details.
+      render: text

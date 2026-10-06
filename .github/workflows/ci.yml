@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, types and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.19"
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --locked --all-extras --dev --python 3.12
+      - run: uv run --locked ruff format --check .
+      - run: uv run --locked ruff check .
+      - run: uv run --locked mypy
+      - run: uv build
+      - name: Test installed wheel outside the checkout
+        run: |
+          uv venv /tmp/beatbloom-wheel --python 3.12
+          uv pip install --python /tmp/beatbloom-wheel/bin/python dist/*.whl
+          cd /tmp
+          /tmp/beatbloom-wheel/bin/beatbloom --version
+          /tmp/beatbloom-wheel/bin/python -m beatbloom --help
+
+  tests:
+    name: Python ${{ matrix.python }} on Linux
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.19"
+          enable-cache: true
+      - run: uv python install ${{ matrix.python }}
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: uv sync --locked --all-extras --dev --python ${{ matrix.python }}
+      - run: ffmpeg -version
+      - run: uv run --locked pytest --cov=beatbloom --cov-report=term-missing
+
+  portable:
+    name: Unit tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.19"
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --locked --all-extras --dev --python 3.12
+      - run: uv run --locked pytest -m "not integration"

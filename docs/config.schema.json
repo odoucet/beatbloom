@@ -1,0 +1,180 @@
+{
+  "$defs": {
+    "BandConfig": {
+      "additionalProperties": false,
+      "description": "One audio feature and its visual mappings.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "low": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 22050.0,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Low"
+        },
+        "high": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 22050.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "High"
+        },
+        "feature": {
+          "default": "onset",
+          "enum": [
+            "onset",
+            "rms",
+            "loudness"
+          ],
+          "title": "Feature",
+          "type": "string"
+        },
+        "attack_ms": {
+          "default": 10.0,
+          "minimum": 0,
+          "title": "Attack Ms",
+          "type": "number"
+        },
+        "release_ms": {
+          "default": 400.0,
+          "minimum": 0,
+          "title": "Release Ms",
+          "type": "number"
+        },
+        "gate": {
+          "default": 0.0,
+          "exclusiveMaximum": 1,
+          "minimum": 0,
+          "title": "Gate",
+          "type": "number"
+        },
+        "gamma": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Gamma",
+          "type": "number"
+        },
+        "ref_percentile": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Percentile"
+        },
+        "floor_percentile": {
+          "default": 5.0,
+          "exclusiveMaximum": 100,
+          "minimum": 0,
+          "title": "Floor Percentile",
+          "type": "number"
+        },
+        "effects": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "bloom",
+              "exposure",
+              "saturation",
+              "zoom"
+            ]
+          },
+          "title": "Effects",
+          "type": "object"
+        },
+        "brightness": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Brightness"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "BandConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The public JSON configuration format for BeatBloom 0.1.",
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "bands": {
+      "items": {
+        "$ref": "#/$defs/BandConfig"
+      },
+      "minItems": 1,
+      "title": "Bands",
+      "type": "array"
+    }
+  },
+  "required": [
+    "bands"
+  ],
+  "title": "ProjectConfig",
+  "type": "object"
+}

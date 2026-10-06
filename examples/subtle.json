@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "bands": [
+    {
+      "name": "global_energy",
+      "feature": "loudness",
+      "attack_ms": 300,
+      "release_ms": 1600,
+      "brightness": [0.88, 1.03]
+    },
+    {
+      "name": "low_pulse",
+      "low": 40,
+      "high": 120,
+      "feature": "rms",
+      "attack_ms": 15,
+      "release_ms": 200,
+      "gate": 0.25,
+      "effects": {"zoom": 0.004, "bloom": 0.15}
+    }
+  ]
+}

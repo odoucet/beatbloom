@@ -1,0 +1,97 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "beatbloom"
+dynamic = ["version"]
+description = "Audio-reactive video effects driven by music analysis."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Olivier Doucet" }]
+keywords = ["audio", "video", "ffmpeg", "music", "audio-reactive"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Multimedia :: Video",
+]
+dependencies = [
+  "librosa>=0.11,<0.12",
+  "numpy>=1.26,<3",
+  "opencv-python-headless>=4.10,<5",
+  "pydantic>=2.10,<3",
+  "scipy>=1.13,<2",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.8,<4"]
+
+[project.scripts]
+beatbloom = "beatbloom.cli:entrypoint"
+
+[project.urls]
+Homepage = "https://github.com/odoucet/beatbloom"
+Repository = "https://github.com/odoucet/beatbloom"
+Issues = "https://github.com/odoucet/beatbloom/issues"
+Changelog = "https://github.com/odoucet/beatbloom/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.15,<2",
+  "pre-commit>=4.1,<5",
+  "pytest>=8.3,<10",
+  "pytest-cov>=6,<8",
+  "ruff>=0.11,<1",
+]
+
+[tool.hatch.version]
+path = "src/beatbloom/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/beatbloom"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src", "/tests", "/examples", "/docs", "/.github",
+  "/pyproject.toml", "/uv.lock", "/Makefile", "/.pre-commit-config.yaml",
+  "/README.md", "/LICENSE", "/CHANGELOG.md", "/CONTRIBUTING.md", "/SECURITY.md",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src/beatbloom"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["cv2", "cv2.*", "librosa", "librosa.*", "scipy", "scipy.*", "matplotlib", "matplotlib.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["integration: real FFmpeg decode/render/encode tests"]
+filterwarnings = ["error", "ignore:.*aifc.*deprecated.*:DeprecationWarning", "ignore:.*audioop.*deprecated.*:DeprecationWarning", "ignore:.*sunau.*deprecated.*:DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["beatbloom"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true

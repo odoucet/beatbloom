@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "bands": [
+    {
+      "name": "volume_global",
+      "feature": "loudness",
+      "attack_ms": 400,
+      "release_ms": 2000,
+      "brightness": [0.6, 1.05]
+    },
+    {
+      "name": "piano_attaques",
+      "low": 400,
+      "high": 2000,
+      "feature": "onset",
+      "attack_ms": 10,
+      "release_ms": 250,
+      "gate": 0.35,
+      "gamma": 2.0,
+      "effects": {"bloom": 1.2, "exposure": 0.10, "saturation": 0.15}
+    }
+  ]
+}
