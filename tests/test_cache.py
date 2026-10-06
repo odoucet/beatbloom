@@ -119,3 +119,32 @@ def test_concurrent_requests_compute_once(tmp_path: Path) -> None:
         results = list(pool.map(lambda _: request(), range(2)))
     assert sorted(results) == [False, True]
     assert calls == 1
+
+
+@pytest.mark.parametrize("corruption", ["columns", "range", "extrema"])
+def test_invalid_waveform_matrix_cache_is_rebuilt(tmp_path: Path, corruption: str) -> None:
+    cache = AnalysisCache(CacheStore(tmp_path))
+    good = FeatureSeries(
+        np.array([0, 0.5], dtype=np.float64),
+        np.array([[-0.5, 0.8], [-0.2, 0.6]], dtype=np.float32),
+        1.0,
+    )
+    kwargs = {"columns": 2, "signed": True, "extrema": True}
+    cache.get("visualizers", "waveform", {}, lambda: good, **kwargs)
+    entry = tmp_path / "visualizers/waveform"
+    values = good.values.copy()
+    if corruption == "columns":
+        values = np.ones((2, 3), dtype=np.float32)
+    elif corruption == "range":
+        values[0, 0] = -1.5
+    else:
+        values[0] = 0.9, -0.8
+    payload = entry / "series.npz"
+    np.savez(payload, timestamps=good.timestamps, values=values, duration=np.float64(1))
+    manifest_path = entry / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["sha256"] = file_hash(payload)
+    manifest_path.write_text(json.dumps(manifest))
+    recovered, hit = cache.get("visualizers", "waveform", {}, lambda: good, **kwargs)
+    assert not hit
+    np.testing.assert_array_equal(recovered.values, good.values)

@@ -60,6 +60,9 @@ dev = [
 [tool.hatch.version]
 path = "src/beatbloom/__init__.py"
 
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/beatbloom/__init__.py" }]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/beatbloom"]
 

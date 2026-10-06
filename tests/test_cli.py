@@ -13,7 +13,7 @@ def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
         main(["--version"])
     assert exc.value.code == 0
-    assert "0.2.0" in capsys.readouterr().out
+    assert "0.3.0" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(

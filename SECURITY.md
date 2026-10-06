@@ -1,6 +1,6 @@
 # Security
 
-BeatBloom 0.2 is experimental. Use supported FFmpeg and Python dependency
+BeatBloom 0.3 is experimental. Use supported FFmpeg and Python dependency
 versions and review third-party media and filter settings before processing.
 The application does not execute shell commands from configuration; subprocess
 arguments are passed directly to FFmpeg. `--grade` is a user-supplied FFmpeg

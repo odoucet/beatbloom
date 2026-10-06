@@ -259,6 +259,288 @@
       },
       "title": "SignalConfig",
       "type": "object"
+    },
+    "SpectrumConfig": {
+      "additionalProperties": false,
+      "description": "Log-frequency STFT bands and independent normalized envelopes.",
+      "properties": {
+        "n_fft": {
+          "default": 4096,
+          "maximum": 16384,
+          "minimum": 256,
+          "title": "N Fft",
+          "type": "integer"
+        },
+        "bands": {
+          "default": 64,
+          "maximum": 256,
+          "minimum": 8,
+          "title": "Bands",
+          "type": "integer"
+        },
+        "low": {
+          "default": 30.0,
+          "exclusiveMaximum": 22050.0,
+          "exclusiveMinimum": 0,
+          "title": "Low",
+          "type": "number"
+        },
+        "high": {
+          "default": 16000.0,
+          "exclusiveMinimum": 0,
+          "maximum": 22050.0,
+          "title": "High",
+          "type": "number"
+        },
+        "floor_db": {
+          "default": -60.0,
+          "exclusiveMaximum": 0,
+          "minimum": -120,
+          "title": "Floor Db",
+          "type": "number"
+        },
+        "ref_percentile": {
+          "default": 99.5,
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Ref Percentile",
+          "type": "number"
+        },
+        "gamma": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Gamma",
+          "type": "number"
+        },
+        "attack_ms": {
+          "default": 15.0,
+          "minimum": 0,
+          "title": "Attack Ms",
+          "type": "number"
+        },
+        "release_ms": {
+          "default": 180.0,
+          "minimum": 0,
+          "title": "Release Ms",
+          "type": "number"
+        }
+      },
+      "title": "SpectrumConfig",
+      "type": "object"
+    },
+    "VisualizerConfig": {
+      "additionalProperties": false,
+      "description": "A bottom overlay containing one or more independently colored sources.",
+      "properties": {
+        "type": {
+          "enum": [
+            "waveform",
+            "spectrum"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "tracks": {
+          "default": [
+            {
+              "stem": "mix",
+              "source": null,
+              "color": "#65d4ff"
+            }
+          ],
+          "items": {
+            "$ref": "#/$defs/VisualizerTrackConfig"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "title": "Tracks",
+          "type": "array"
+        },
+        "layout": {
+          "default": "overlay",
+          "enum": [
+            "overlay",
+            "stacked",
+            "side_by_side"
+          ],
+          "title": "Layout",
+          "type": "string"
+        },
+        "left": {
+          "default": 0.05,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Left",
+          "type": "number"
+        },
+        "width": {
+          "default": 0.9,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Width",
+          "type": "number"
+        },
+        "height": {
+          "default": 0.18,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Height",
+          "type": "number"
+        },
+        "bottom": {
+          "default": 0.03,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Bottom",
+          "type": "number"
+        },
+        "gap": {
+          "default": 0.025,
+          "exclusiveMaximum": 0.5,
+          "minimum": 0,
+          "title": "Gap",
+          "type": "number"
+        },
+        "opacity": {
+          "default": 0.9,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Opacity",
+          "type": "number"
+        },
+        "gain": {
+          "default": 1.0,
+          "minimum": 0,
+          "title": "Gain",
+          "type": "number"
+        },
+        "background": {
+          "default": "#050812",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "title": "Background",
+          "type": "string"
+        },
+        "background_opacity": {
+          "default": 0.25,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Background Opacity",
+          "type": "number"
+        },
+        "line_width": {
+          "default": 2,
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Line Width",
+          "type": "integer"
+        },
+        "fill_opacity": {
+          "default": 0.18,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Fill Opacity",
+          "type": "number"
+        },
+        "bar_gap": {
+          "default": 0.2,
+          "exclusiveMaximum": 1,
+          "minimum": 0,
+          "title": "Bar Gap",
+          "type": "number"
+        },
+        "waveform": {
+          "$ref": "#/$defs/WaveformConfig"
+        },
+        "spectrum": {
+          "$ref": "#/$defs/SpectrumConfig"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "VisualizerConfig",
+      "type": "object"
+    },
+    "VisualizerTrackConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "stem": {
+          "anyOf": [
+            {
+              "enum": [
+                "mix",
+                "drums",
+                "bass",
+                "vocals",
+                "other",
+                "guitar",
+                "piano"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stem"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "color": {
+          "default": "#65d4ff",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "title": "Color",
+          "type": "string"
+        }
+      },
+      "title": "VisualizerTrackConfig",
+      "type": "object"
+    },
+    "WaveformConfig": {
+      "additionalProperties": false,
+      "description": "Full-track peak normalization; window and points are display settings.",
+      "properties": {
+        "window_seconds": {
+          "default": 4.0,
+          "maximum": 30,
+          "minimum": 0.05,
+          "title": "Window Seconds",
+          "type": "number"
+        },
+        "points": {
+          "default": 512,
+          "maximum": 4096,
+          "minimum": 2,
+          "title": "Points",
+          "type": "integer"
+        },
+        "ref_percentile": {
+          "default": 99.5,
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Ref Percentile",
+          "type": "number"
+        },
+        "show_playhead": {
+          "default": true,
+          "title": "Show Playhead",
+          "type": "boolean"
+        }
+      },
+      "title": "WaveformConfig",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -273,7 +555,6 @@
       "additionalProperties": {
         "$ref": "#/$defs/SignalConfig"
       },
-      "minProperties": 1,
       "title": "Signals",
       "type": "object"
     },
@@ -287,11 +568,17 @@
     },
     "separation": {
       "$ref": "#/$defs/SeparationConfig"
+    },
+    "visualizers": {
+      "additionalProperties": {
+        "$ref": "#/$defs/VisualizerConfig"
+      },
+      "title": "Visualizers",
+      "type": "object"
     }
   },
   "required": [
-    "schema_version",
-    "signals"
+    "schema_version"
   ],
   "title": "ProjectConfig",
   "type": "object",

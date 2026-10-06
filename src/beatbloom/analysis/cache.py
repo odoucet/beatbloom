@@ -19,11 +19,18 @@ LOGGER = logging.getLogger(__name__)
 CACHE_FORMAT = 1
 
 
-def validate_series(series: FeatureSeries, normalized: bool = False) -> None:
+def validate_series(
+    series: FeatureSeries,
+    normalized: bool = False,
+    *,
+    columns: int | None = None,
+    signed: bool = False,
+    extrema: bool = False,
+) -> None:
     times, values = series.timestamps, series.values
     if (
         times.ndim != 1
-        or values.ndim != 1
+        or values.ndim != (1 if columns is None else 2)
         or len(times) != len(values)
         or not len(values)
         or times.dtype != np.float64
@@ -35,10 +42,15 @@ def validate_series(series: FeatureSeries, normalized: bool = False) -> None:
         or times[0] != 0
         or np.any(np.diff(times) <= 0)
         or times[-1] > series.duration + 1e-8
-        or np.any(values < 0)
+        or (not signed and np.any(values < 0))
+        or (normalized and signed and np.any(values < -1))
         or (normalized and np.any(values > 1))
     ):
         raise ValueError("invalid timestamped cache series")
+    if columns is not None and values.shape[1] != columns:
+        raise ValueError("invalid cache column count")
+    if extrema and (columns != 2 or np.any(values[:, 0] > values[:, 1])):
+        raise ValueError("invalid waveform extrema")
 
 
 class AnalysisCache:
@@ -53,9 +65,12 @@ class AnalysisCache:
         compute: Callable[[], FeatureSeries],
         *,
         refresh: bool = False,
+        columns: int | None = None,
+        signed: bool = False,
+        extrema: bool = False,
     ) -> tuple[FeatureSeries, bool]:
         destination = self.store.entry(namespace, key)
-        normalized = namespace == "signals"
+        normalized = namespace in {"signals", "visualizers"}
         with self.store.locked(namespace, key):
             if destination.exists() and not refresh:
                 try:
@@ -75,13 +90,15 @@ class AnalysisCache:
                         series = FeatureSeries(
                             data["timestamps"], data["values"], float(data["duration"])
                         )
-                    validate_series(series, normalized)
+                    validate_series(
+                        series, normalized, columns=columns, signed=signed, extrema=extrema
+                    )
                     LOGGER.info("Cache hit: %s/%s", namespace, key[:12])
                     return series, True
                 except (OSError, ValueError, KeyError, TypeError, EOFError, BadZipFile) as exc:
                     LOGGER.warning("Rebuilding invalid %s cache %s: %s", namespace, key[:12], exc)
             series = compute()
-            validate_series(series, normalized)
+            validate_series(series, normalized, columns=columns, signed=signed, extrema=extrema)
             with tempfile.TemporaryDirectory(prefix=f".{key}-", dir=destination.parent) as name:
                 staged = Path(name)
                 payload = staged / "series.npz"

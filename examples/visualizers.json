@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "signals": {
+    "energy": {"stem": "mix", "feature": "rms", "attack_ms": 20, "release_ms": 300}
+  },
+  "effects": [
+    {"signal": "energy", "effect": "bloom", "amount": 0.15}
+  ],
+  "visualizers": {
+    "waveform": {
+      "type": "waveform",
+      "tracks": [{"stem": "mix", "color": "#65d4ff"}],
+      "height": 0.10,
+      "bottom": 0.02,
+      "opacity": 0.80,
+      "waveform": {"window_seconds": 4, "points": 512}
+    },
+    "spectrum": {
+      "type": "spectrum",
+      "tracks": [{"stem": "mix", "color": "#ffaa66"}],
+      "height": 0.16,
+      "bottom": 0.15,
+      "opacity": 0.85,
+      "spectrum": {"bands": 64, "low": 30, "high": 16000, "release_ms": 180}
+    }
+  }
+}

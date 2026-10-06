@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 0.3.0 — 2026-10-06
+
+### Added
+
+- Optional named `visualizers` in schema v2, with waveform and logarithmic
+  spectrum overlays drawn after reactive effects and before grading.
+- Multiple colored tracks from the mix, external files or Demucs stems;
+  overlay, stacked and side-by-side layouts with responsive frame regions.
+- Opacity, gain, backgrounds, waveform fill/outline/playhead and spectrum gaps.
+- Native signed PCM peak caches, blockwise Hann STFT/log-band caches and
+  independent normalized visualizer envelopes shared by analyze/preview/render.
+- Peak-preserving waveform window resampling and frequency-envelope interpolation.
+- Visualizer-only projects, updated schemas/docs, mix/stem examples and an
+  original synthetic demo generator requiring no model downloads.
+- Tests for tone placement, FFT block boundaries, short/silent sources,
+  transient retention, colors/opacity/layouts, cache reuse/repair/refresh and
+  real FFmpeg visualizer renders with the original soundtrack.
+
+### Compatibility
+
+- Existing schema v2 configurations remain valid and keep their appearance.
+  Visualizers are optional; v1/legacy bands JSON remains unsupported.
+- Existing v0.2 signal and stem cache identities are retained. Visualizer
+  styles and video settings do not invalidate audio processing.
+- No new runtime dependencies. Dynamic version changes now refresh uv's
+  editable-package metadata through explicit file cache keys.
+
 ## 0.2.0 — 2026-10-06
 
 ### Added

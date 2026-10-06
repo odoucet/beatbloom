@@ -24,8 +24,9 @@ from beatbloom.media import (
     require_tools,
     stop_process,
 )
-from beatbloom.models import RenderOptions, RenderResult, Signal, VideoInfo
+from beatbloom.models import FeatureSeries, RenderOptions, RenderResult, Signal, VideoInfo
 from beatbloom.render.effects import apply_effects, parameters_at
+from beatbloom.render.visualizers import apply_visualizers
 
 LOGGER = logging.getLogger(__name__)
 VIDEO_SUFFIXES = {".mp4", ".mov", ".mkv"}
@@ -54,6 +55,12 @@ def _validate_options(options: RenderOptions, config: ProjectConfig) -> None:
         Path(signal.source).resolve()
         for signal in config.signals.values()
         if signal.source is not None
+    )
+    inputs.update(
+        Path(track.source).resolve()
+        for visualizer in config.visualizers.values()
+        for track in visualizer.tracks
+        if track.source is not None
     )
     for path in inputs:
         require_file(path, "Input")
@@ -112,6 +119,7 @@ def _encode(
     options: RenderOptions,
     config: ProjectConfig,
     signals: dict[str, Signal],
+    visualizers: dict[str, tuple[FeatureSeries, ...]],
     video: VideoInfo,
     duration: float,
     temporary: Path,
@@ -231,6 +239,7 @@ def _encode(
                 normalized = np.asarray(image, dtype=np.float32) / np.float32(255)
                 timestamp = options.start + frames / float(video.fps)
                 result = apply_effects(normalized, parameters_at(config, signals, timestamp))
+                result = apply_visualizers(result, config.visualizers, visualizers, timestamp)
                 writer.stdin.write((result * 255 + 0.5).astype(np.uint8).tobytes())
                 frames += 1
                 if frames % 240 == 0:
@@ -300,7 +309,7 @@ def render_video(options: RenderOptions, config: ProjectConfig | None = None) ->
     os.close(descriptor)
     temporary = Path(filename)
     try:
-        frames = _encode(options, config, signals, video, duration, temporary)
+        frames = _encode(options, config, signals, analysis.visualizers, video, duration, temporary)
         if not temporary.is_file() or temporary.stat().st_size == 0:
             raise BeatBloomError("Encoder produced an empty output file")
         if options.output.exists() and not options.overwrite:

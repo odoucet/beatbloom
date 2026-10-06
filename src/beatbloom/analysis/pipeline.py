@@ -14,8 +14,9 @@ from beatbloom.analysis.features import (
     extract_features,
     make_envelope,
 )
+from beatbloom.analysis.visualizers import analyze_visualizers
 from beatbloom.cache import CacheStore, file_hash, fingerprint, write_json
-from beatbloom.config import SAMPLE_RATE, ProjectConfig, SignalConfig
+from beatbloom.config import SAMPLE_RATE, AudioSourceConfig, ProjectConfig, SignalConfig
 from beatbloom.errors import BeatBloomError
 from beatbloom.media import audio_duration, load_audio, require_file, require_tools
 from beatbloom.models import AnalysisResult, AudioTrack, FeatureSeries, Signal
@@ -40,15 +41,18 @@ def analyze(
     require_file(audio, "Audio")
     if drive is not None:
         require_file(drive, "Default analysis source")
-    for specification in config.signals.values():
-        if specification.source is not None:
-            require_file(Path(specification.source), "Signal source")
+    specifications: list[AudioSourceConfig] = list(config.signals.values()) + [
+        track for visualizer in config.visualizers.values() for track in visualizer.tracks
+    ]
+    for candidate in specifications:
+        if candidate.source is not None:
+            require_file(Path(candidate.source), "Analysis source")
     store = CacheStore(cache_dir)
     cache = AnalysisCache(store)
     hashes = {audio: file_hash(audio)}
     duration = audio_duration(audio)
     stems = None
-    if any(signal.stem not in (None, "mix") for signal in config.signals.values()):
+    if any(signal.stem not in (None, "mix") for signal in specifications):
         stems = separate_audio(
             audio,
             config.separation,
@@ -57,8 +61,8 @@ def analyze(
             backend=backend,
         )
         hashes.update({stems.stems[name]: value for name, value in stems.hashes.items()})
-    sources: dict[str, Path] = {}
-    for name, specification in config.signals.items():
+
+    def resolve_source(specification: AudioSourceConfig) -> Path:
         if specification.source is not None:
             source = Path(specification.source).resolve()
         elif specification.stem == "mix":
@@ -68,10 +72,26 @@ def analyze(
             source = stems.stems[specification.stem]
         else:
             source = (drive or audio).resolve()
-        sources[name] = source
         if source not in hashes:
             hashes[source] = file_hash(source)
+        return source
+
+    sources = {
+        name: resolve_source(specification) for name, specification in config.signals.items()
+    }
+    visualizer_sources = {
+        name: tuple(resolve_source(track) for track in visualizer.tracks)
+        for name, visualizer in config.visualizers.items()
+    }
     tracks: dict[Path, AudioTrack] = {}
+
+    def load_track(source: Path) -> AudioTrack:
+        if source not in tracks:
+            tracks[source] = load_audio(source)
+            if file_hash(source) != hashes[source]:
+                raise BeatBloomError("Audio changed during analysis; retry with a stable input")
+        return tracks[source]
+
     signals: dict[str, Signal] = {}
     signal_keys: dict[str, str] = {}
     signal_hits = 0
@@ -109,13 +129,7 @@ def analyze(
 
             def compute_features() -> FeatureSeries:
                 LOGGER.info("Extracting %s from %s", specification.feature, source)
-                if source not in tracks:
-                    tracks[source] = load_audio(source)
-                    if file_hash(source) != hashes[source]:
-                        raise BeatBloomError(
-                            "Audio changed during analysis; retry with a stable input"
-                        )
-                return extract_features(tracks[source], specification)
+                return extract_features(load_track(source), specification)
 
             features, hit = cache.get(
                 "features",
@@ -140,11 +154,21 @@ def analyze(
         if source == audio:
             duration = envelope.duration
 
+    visuals = analyze_visualizers(
+        config.visualizers, visualizer_sources, hashes, load_track, store, refresh=refresh
+    )
+    for name, source_paths in visualizer_sources.items():
+        for source, series in zip(source_paths, visuals.series[name], strict=True):
+            if source == audio:
+                duration = series.duration
+
     bundle_parameters: dict[str, object] = {
         "analysis_version": ANALYSIS_VERSION,
         "audio_sha256": hashes[audio],
         "signals": signal_keys,
     }
+    if visuals.keys:
+        bundle_parameters["visualizers"] = visuals.keys
     bundle_key = fingerprint(bundle_parameters)
     manifest = store.entry("analysis", bundle_key).with_suffix(".json")
     write_json(
@@ -162,9 +186,28 @@ def analyze(
                 for name, key in signal_keys.items()
             },
             "stems_manifest": str(stems.manifest) if stems is not None else None,
+            "visualizers": {
+                name: [
+                    {
+                        "source": str(source),
+                        "kind": config.visualizers[name].type,
+                        "key": key,
+                        "series": str(store.entry("visualizers", key) / "series.npz"),
+                    }
+                    for source, key in zip(visualizer_sources[name], keys, strict=True)
+                ]
+                for name, keys in visuals.keys.items()
+            },
         },
     )
-    LOGGER.info("Analysis ready: %s/%s signal cache hits; %s", signal_hits, len(signals), manifest)
+    LOGGER.info(
+        "Analysis ready: %s/%s signals reused, %s/%s visualizer tracks reused; %s",
+        signal_hits,
+        len(signals),
+        visuals.hits,
+        sum(len(series) for series in visuals.series.values()),
+        manifest,
+    )
     return AnalysisResult(
         signals,
         manifest,
@@ -172,4 +215,7 @@ def analyze(
         signal_hits,
         feature_hits,
         stems.cached if stems is not None else None,
+        visuals.series,
+        visuals.hits,
+        visuals.feature_hits,
     )

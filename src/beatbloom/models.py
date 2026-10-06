@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
 from typing import TypeAlias
@@ -72,6 +72,9 @@ class AnalysisResult:
     signal_hits: int
     feature_hits: int
     stems_hit: bool | None = None
+    visualizers: dict[str, tuple[FeatureSeries, ...]] = field(default_factory=dict)
+    visualizer_hits: int = 0
+    visualizer_feature_hits: int = 0
 
 
 @dataclass(frozen=True)

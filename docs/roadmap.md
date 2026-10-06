@@ -26,9 +26,12 @@
 
 ## 0.3 — audio visualizers
 
-- [ ] Bottom-of-frame waveform and spectrum
-- [ ] Multi-stem spectrum and configurable colors/layout/opacity
-- [ ] Cached STFT logarithmic bands and visualizer envelopes
+- [x] Bottom-of-frame waveform and spectrum
+- [x] Multi-stem spectrum and configurable colors/layout/opacity
+- [x] Cached STFT logarithmic bands and visualizer envelopes
+
+- [x] Visualizer-only projects and unchanged v0.2 configuration support
+- [x] Reproducible synthetic multi-instrument demo
 
 ## 0.4 — creative workflow
 

@@ -138,6 +138,41 @@ def test_requesting_another_stem_reuses_the_full_separation(
 
 
 @pytest.mark.integration
+def test_visualizer_only_stems_trigger_separation_and_share_it_with_signals(
+    synthetic_audio: Path, tmp_path: Path
+) -> None:
+    from beatbloom.analysis.pipeline import analyze
+
+    backend = SyntheticBackend()
+    config = ProjectConfig.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "visualizers": {
+                    "stems": {
+                        "type": "spectrum",
+                        "tracks": [{"stem": "piano"}, {"stem": "drums"}],
+                        "spectrum": {"n_fft": 512, "bands": 16},
+                    }
+                },
+            }
+        )
+    )
+    first = analyze(synthetic_audio, config, cache_dir=tmp_path / "cache", backend=backend)
+    assert not first.stems_hit and len(first.visualizers["stems"]) == 2
+    changed = config.model_dump(mode="json")
+    changed["signals"] = {"kick": {"stem": "drums", "feature": "rms"}}
+    second = analyze(
+        synthetic_audio,
+        ProjectConfig.model_validate_json(json.dumps(changed)),
+        cache_dir=tmp_path / "cache",
+        backend=backend,
+    )
+    assert second.stems_hit and second.visualizer_hits == 2
+    assert backend.calls == 1
+
+
+@pytest.mark.integration
 @pytest.mark.demucs_runtime
 def test_real_demucs_api_without_downloading_weights(
     synthetic_audio: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -175,3 +210,24 @@ def test_real_demucs_api_without_downloading_weights(
         SeparationConfig(model="htdemucs", device="cpu", shifts=0, segment=1),
         cache_dir=tmp_path / "cache",
     ).cached
+    from beatbloom.analysis.pipeline import analyze
+
+    config = ProjectConfig.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "separation": {"model": "htdemucs", "device": "cpu", "shifts": 0, "segment": 1},
+                "visualizers": {
+                    "stems": {
+                        "type": "spectrum",
+                        "tracks": [{"stem": "drums"}, {"stem": "bass"}],
+                        "spectrum": {"n_fft": 512, "bands": 16},
+                    }
+                },
+            }
+        )
+    )
+    analyzed = analyze(synthetic_audio, config, cache_dir=tmp_path / "cache")
+    assert analyzed.stems_hit and len(analyzed.visualizers["stems"]) == 2
+    for series in analyzed.visualizers["stems"]:
+        assert series.values.shape[1] == 16 and np.all(np.isfinite(series.values))

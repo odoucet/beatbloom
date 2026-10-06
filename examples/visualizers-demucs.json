@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "separation": {"model": "htdemucs_6s", "device": "auto"},
+  "visualizers": {
+    "mix_waveform": {
+      "type": "waveform",
+      "tracks": [{"stem": "mix", "color": "#d6e2ef"}],
+      "height": 0.09,
+      "bottom": 0.02,
+      "opacity": 0.65
+    },
+    "instruments": {
+      "type": "spectrum",
+      "layout": "side_by_side",
+      "tracks": [
+        {"stem": "piano", "color": "#65d4ff"},
+        {"stem": "drums", "color": "#ffaa66"},
+        {"stem": "bass", "color": "#c498ff"},
+        {"stem": "other", "color": "#70dfb0"}
+      ],
+      "height": 0.18,
+      "bottom": 0.14,
+      "gap": 0.025,
+      "opacity": 0.90,
+      "spectrum": {"bands": 48, "low": 30, "high": 16000}
+    }
+  }
+}

@@ -1,10 +1,11 @@
 # BeatBloom
 
 Audio-reactive effects for existing videos: bloom, exposure, saturation, zoom
-and brightness driven by music.
+and brightness driven by music, plus waveform and logarithmic spectrum overlays.
 
-**Version 0.2.0** separates named audio signals from visual mappings, integrates
-optional Demucs separation and caches stems, raw features and envelopes.
+**Version 0.3.0** adds bottom-of-frame waveform and spectrum visualizers,
+including multiple instrument tracks, layouts, colors and opacity. Optional
+Demucs separation and full-track analysis remain cached independently of style.
 `analyze`, `preview` and `render` share the same full-track analysis.
 The original music mix is always used in the output.
 
@@ -96,6 +97,66 @@ replaced by `--audio`. Output is CFR; fractional FPS are preserved.
 Rotation metadata is not applied. Dimensions must be even; `--size` scales
 and center-crops to fit.
 
+## Waveforms and spectra
+
+```bash
+uv run beatbloom preview video.mp4 --audio morceau.opus \
+  --config examples/visualizers.json --start 60
+
+# Four instrument spectra from Demucs, plus the mix waveform:
+uv run --extra demucs beatbloom preview video.mp4 --audio morceau.opus \
+  --config examples/visualizers-demucs.json --start 60
+```
+
+Add the optional `visualizers` object to any schema v2 project. A minimal
+visualizer-only configuration needs no reactive signals or effects:
+
+```json
+{
+  "schema_version": 2,
+  "visualizers": {
+    "music": {
+      "type": "spectrum",
+      "tracks": [{"stem": "mix", "color": "#65d4ff"}],
+      "height": 0.18,
+      "bottom": 0.03,
+      "opacity": 0.9
+    }
+  }
+}
+```
+
+Use `type: "waveform"` for a moving signed peak waveform centered on the
+current audio time. Spectrum bars use logarithmic frequency bands and native
+attack/release envelopes. Both normalize over the complete track; previews
+and final renders use the same data.
+
+Tracks can select `stem` aliases or `source` files. The default track explicitly
+uses the mix; a track without either selector uses `--drive`, then the mix.
+Choose `overlay`, `stacked` or `side_by_side` for multiple tracks. Region sizes
+and positions are fractions of the output frame, so resizing keeps the layout.
+Each track has its own RGB color; opacity, gain, background and gaps are configurable.
+Overlays are drawn after reactive effects and before the FFmpeg grade filter.
+
+`analyze` prepares visualizer data too. Color, layout, opacity, gain, waveform
+window, points, video size, FPS and excerpts reuse the caches. Spectrum envelope
+tuning reuses raw log bands. Changing FFT size, band count or frequency range
+recomputes the spectrum. Existing v0.2 JSON remains valid; no overlay is added
+unless declared. See [the visualizer reference](docs/configuration.md#visualizers).
+
+Try an entirely synthetic, reproducible demo:
+
+```bash
+uv run python examples/make_demo.py demo
+uv run beatbloom preview demo/video.mp4 --audio demo/mix.wav \
+  --config demo/visualizers.json --no-play -o demo/preview.mp4
+```
+
+The generator creates original piano-like tones, drums, bass and a background
+video. It uses external-file tracks, so no Demucs installation or weights are
+needed. `demo/` is ignored by Git. The script replaces its generated inputs
+when run again; BeatBloom still protects the preview output unless `--overwrite` is used.
+
 ## Stems and reusable analysis
 
 ```bash
@@ -123,6 +184,8 @@ selects a project cache. Logs and the analysis manifest show their locations.
 - Stem keys include input file content, model, backend versions and separation options.
 - Feature keys include source content, extraction parameters and numerical library versions.
 - Envelope keys include the feature key and normalization/smoothing settings.
+- Visualizer peak/log-band caches and their envelopes use separate namespaces;
+  display settings do not affect their identities.
 - Effect weights, grading, video, size, FPS and excerpt do not invalidate analysis.
 - Changing gate, gamma or attack/release reuses raw features.
 - Every hit verifies manifests and payload hashes. Invalid entries rebuild.
@@ -136,8 +199,8 @@ so choose its location accordingly. Model weights are managed by Demucs separate
 ## JSON v2
 
 **Legacy `bands` JSON and schema v1 are no longer supported.**
-Use the updated examples or write `schema_version: 2`, named `signals` and a
-separate `effects` list:
+Use `schema_version: 2`, named `signals` with an independent `effects` list,
+and/or named `visualizers`:
 
 ```json
 {
@@ -151,7 +214,7 @@ separate `effects` list:
 }
 ```
 
-Signals can also use `source: "../stems/drums.wav"`; these files must already
+Signals and visualizer tracks can also use `source: "../stems/drums.wav"`; these files must already
 be aligned with the mix. Relative paths resolve against the JSON file.
 Unknown keys, invalid values and undefined signal references are rejected.
 Validation reads no media and downloads no models:
@@ -178,7 +241,8 @@ Without Make: `uv sync --locked --extra plot --dev`, then `uv run ruff format --
 `make install-demucs` additionally installs the separation extra.
 
 Tests use synthetic media, real FFmpeg rendering and a deterministic test backend
-for cache behavior. An optional real Demucs/PyTorch smoke test uses the official
+for cache behavior. Visualizer tests cover frequency placement, peak retention,
+native smoothing, RGB/opacity, layouts, resizing and warm-cache previews. An optional real Demucs/PyTorch smoke test uses the official
 tiny untrained model, without downloading production weights:
 
 ```bash

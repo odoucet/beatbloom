@@ -61,7 +61,9 @@ def crf_value(value: str) -> int:
 
 
 def _processing_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--config", type=Path, help="Schema v2 JSON with signals and effects")
+    parser.add_argument(
+        "--config", type=Path, help="Schema v2 JSON with signals, effects and visualizers"
+    )
     parser.add_argument("--cache-dir", type=Path, help="Persistent cache (default: OS user cache)")
     parser.add_argument("--refresh", action="store_true", help="Recompute required cache entries")
     parser.add_argument(
@@ -221,9 +223,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         config = _project_config(args)
         if args.command == "validate":
             logger.info(
-                "Valid configuration: %s signals, %s effects",
+                "Valid configuration: %s signals, %s effects, %s visualizers",
                 len(config.signals),
                 len(config.effects),
+                len(config.visualizers),
             )
         elif args.command == "separate":
             from beatbloom.separation.cache import separate_audio
@@ -241,11 +244,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.audio, config, drive=args.drive, cache_dir=args.cache_dir, refresh=args.refresh
             )
             logger.info(
-                "Analysis manifest: %s (%s/%s envelopes reused, %s raw features reused)",
+                "Analysis manifest: %s (%s/%s envelopes reused, %s raw features reused; "
+                "%s/%s visualizer tracks reused, %s raw visualizer features reused)",
                 result.manifest,
                 result.signal_hits,
                 len(result.signals),
                 result.feature_hits,
+                result.visualizer_hits,
+                sum(len(tracks) for tracks in result.visualizers.values()),
+                result.visualizer_feature_hits,
             )
         else:
             from beatbloom.render.engine import render_video

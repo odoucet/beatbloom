@@ -40,11 +40,29 @@ class SeparationConfig(StrictModel):
         return (*basic, "guitar", "piano") if self.model == "htdemucs_6s" else basic
 
 
-class SignalConfig(StrictModel):
-    """One source and its analysis/envelope parameters, independent of video FPS."""
+class AudioSourceConfig(StrictModel):
+    """Source selection shared by reactive signals and visualizer tracks."""
 
     stem: StemName | None = None
     source: str | None = Field(default=None, min_length=1)
+
+    @field_validator("source")
+    @classmethod
+    def nonblank_source(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("source must not be blank")
+        return value
+
+    @model_validator(mode="after")
+    def validate_source(self) -> AudioSourceConfig:
+        if self.source is not None and self.stem is not None:
+            raise ValueError("choose either source or stem, not both")
+        return self
+
+
+class SignalConfig(AudioSourceConfig):
+    """One source and its analysis/envelope parameters, independent of video FPS."""
+
     low: Annotated[float, Field(ge=0, lt=NYQUIST)] | None = None
     high: Annotated[float, Field(gt=0, le=NYQUIST)] | None = None
     feature: FeatureName = "onset"
@@ -55,13 +73,6 @@ class SignalConfig(StrictModel):
     ref_percentile: Percentile | None = None
     floor_percentile: Annotated[float, Field(ge=0, lt=100)] = 5.0
 
-    @field_validator("source")
-    @classmethod
-    def nonblank_source(cls, value: str | None) -> str | None:
-        if value is not None and not value.strip():
-            raise ValueError("source must not be blank")
-        return value
-
     @property
     def reference(self) -> float:
         if self.ref_percentile is not None:
@@ -70,8 +81,6 @@ class SignalConfig(StrictModel):
 
     @model_validator(mode="after")
     def validate_signal(self) -> SignalConfig:
-        if self.source is not None and self.stem is not None:
-            raise ValueError("choose either source or stem, not both")
         if (self.low or 0) >= (self.high if self.high is not None else NYQUIST):
             raise ValueError("low must be strictly less than high")
         if self.feature == "loudness" and self.floor_percentile >= self.reference:
@@ -97,19 +106,98 @@ class EffectConfig(StrictModel):
         return self
 
 
+Color = Annotated[str, Field(pattern=r"^#[0-9a-fA-F]{6}$")]
+Unit = Annotated[float, Field(ge=0, le=1)]
+PositiveUnit = Annotated[float, Field(gt=0, le=1)]
+
+
+class VisualizerTrackConfig(AudioSourceConfig):
+    color: Color = "#65d4ff"
+
+
+class WaveformConfig(StrictModel):
+    """Full-track peak normalization; window and points are display settings."""
+
+    window_seconds: Annotated[float, Field(ge=0.05, le=30)] = 4.0
+    points: Annotated[int, Field(ge=2, le=4096)] = 512
+    ref_percentile: Percentile = 99.5
+    show_playhead: bool = True
+
+
+class SpectrumConfig(StrictModel):
+    """Log-frequency STFT bands and independent normalized envelopes."""
+
+    n_fft: Annotated[int, Field(ge=256, le=16384)] = 4096
+    bands: Annotated[int, Field(ge=8, le=256)] = 64
+    low: Annotated[float, Field(gt=0, lt=NYQUIST)] = 30.0
+    high: Annotated[float, Field(gt=0, le=NYQUIST)] = 16000.0
+    floor_db: Annotated[float, Field(ge=-120, lt=0)] = -60.0
+    ref_percentile: Percentile = 99.5
+    gamma: Annotated[float, Field(gt=0)] = 1.0
+    attack_ms: NonNegative = 15.0
+    release_ms: NonNegative = 180.0
+
+    @model_validator(mode="after")
+    def validate_spectrum(self) -> SpectrumConfig:
+        if self.low >= self.high:
+            raise ValueError("spectrum low must be strictly less than high")
+        if self.n_fft & (self.n_fft - 1):
+            raise ValueError("n_fft must be a power of two")
+        return self
+
+
+class VisualizerConfig(StrictModel):
+    """A bottom overlay containing one or more independently colored sources."""
+
+    type: Literal["waveform", "spectrum"]
+    tracks: tuple[VisualizerTrackConfig, ...] = Field(
+        default=(VisualizerTrackConfig(stem="mix"),),
+        min_length=1,
+        max_length=16,
+    )
+    layout: Literal["overlay", "stacked", "side_by_side"] = "overlay"
+    left: Unit = 0.05
+    width: PositiveUnit = 0.90
+    height: PositiveUnit = 0.18
+    bottom: Unit = 0.03
+    gap: Annotated[float, Field(ge=0, lt=0.5)] = 0.025
+    opacity: Unit = 0.90
+    gain: NonNegative = 1.0
+    background: Color = "#050812"
+    background_opacity: Unit = 0.25
+    line_width: Annotated[int, Field(ge=1, le=8)] = 2
+    fill_opacity: Unit = 0.18
+    bar_gap: Annotated[float, Field(ge=0, lt=1)] = 0.20
+    waveform: WaveformConfig = Field(default_factory=WaveformConfig)
+    spectrum: SpectrumConfig = Field(default_factory=SpectrumConfig)
+
+    @model_validator(mode="after")
+    def validate_region(self) -> VisualizerConfig:
+        if self.left + self.width > 1 + 1e-12 or self.bottom + self.height > 1 + 1e-12:
+            raise ValueError("visualizer region must fit within the frame")
+        return self
+
+
 class ProjectConfig(StrictModel):
     """Only schema v2 is accepted; legacy bands JSON has been removed."""
 
     schema_version: Literal[2]
-    signals: dict[str, SignalConfig] = Field(min_length=1)
+    signals: dict[str, SignalConfig] = Field(default_factory=dict)
     effects: tuple[EffectConfig, ...] = ()
     separation: SeparationConfig = Field(default_factory=SeparationConfig)
+    visualizers: dict[str, VisualizerConfig] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_references(self) -> ProjectConfig:
-        for name, signal in self.signals.items():
+        if not self.signals and not self.visualizers:
+            raise ValueError("provide at least one signal or visualizer")
+        for name in (*self.signals, *self.visualizers):
             if not name.strip():
-                raise ValueError("signal names must not be blank")
+                raise ValueError("signal and visualizer names must not be blank")
+        sources = list(self.signals.values()) + [
+            track for visualizer in self.visualizers.values() for track in visualizer.tracks
+        ]
+        for signal in sources:
             if signal.stem not in (None, "mix") and signal.stem not in self.separation.stems:
                 raise ValueError(
                     f"stem {signal.stem!r} is unavailable with {self.separation.model}"
@@ -158,7 +246,7 @@ def load_config(path: Path | None = None) -> ProjectConfig:
     except (ValidationError, UnicodeError) as exc:
         raise BeatBloomError(
             f"Invalid configuration {path}: "
-            "schema_version: 2 with signals and effects is required.\n"
+            "schema_version: 2 with signals or visualizers is required.\n"
             f"Legacy bands JSON is not supported.\n{exc}"
         ) from exc
     base = path.resolve().parent
@@ -168,4 +256,17 @@ def load_config(path: Path | None = None) -> ProjectConfig:
         else signal
         for name, signal in config.signals.items()
     }
-    return config.model_copy(update={"signals": signals})
+    visualizers = {
+        name: visualizer.model_copy(
+            update={
+                "tracks": tuple(
+                    track.model_copy(update={"source": str((base / track.source).resolve())})
+                    if track.source is not None
+                    else track
+                    for track in visualizer.tracks
+                )
+            }
+        )
+        for name, visualizer in config.visualizers.items()
+    }
+    return config.model_copy(update={"signals": signals, "visualizers": visualizers})

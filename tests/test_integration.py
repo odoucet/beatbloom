@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from beatbloom.cli import main
+from beatbloom.config import ProjectConfig
 from beatbloom.errors import BeatBloomError
 from beatbloom.media import probe_video
 from beatbloom.models import RenderOptions
@@ -397,3 +398,158 @@ def test_render_settings_reuse_analysis_from_analyze_command(
     assert result.frames == 6
     assert probe_video(result.output).fps == Fraction(30000, 1001)
     assert list((cache / "analysis").glob("*.json")) == manifests
+
+
+def test_visualizer_only_render_changes_bottom_and_preserves_audio(
+    media_files: tuple[Path, Path], tmp_path: Path
+) -> None:
+    video, audio = media_files
+    config = ProjectConfig.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "visualizers": {
+                    "music": {
+                        "type": "spectrum",
+                        "tracks": [{"stem": "mix", "color": "#ff6633"}],
+                        "height": 0.4,
+                        "bottom": 0,
+                        "left": 0,
+                        "width": 1,
+                        "background_opacity": 0,
+                        "spectrum": {"n_fft": 512, "bands": 16},
+                    }
+                },
+            }
+        )
+    )
+    result = render_video(
+        RenderOptions(
+            video,
+            audio,
+            tmp_path / "spectrum.mp4",
+            start=0.5,
+            duration=0.5,
+            preset="ultrafast",
+            crf=10,
+        ),
+        config=config,
+    )
+    assert result.frames == 6
+    original = video_pixels(video).reshape(48, 64, 3).astype(float)
+    rendered = video_pixels(result.output).reshape(48, 64, 3).astype(float)
+    assert np.mean(np.abs(rendered[:25] - original[:25])) < 2
+    assert np.mean(np.abs(rendered[32:] - original[32:])) > 6
+    from beatbloom.media import load_audio
+
+    assert np.max(np.abs(load_audio(result.output).samples)) > 0.05
+
+
+def test_visualizer_preview_reuses_analyze_across_fps_size_and_colors(
+    media_files: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    video, audio = media_files
+    path = tmp_path / "visuals.json"
+    payload = {
+        "schema_version": 2,
+        "visualizers": {
+            "wave": {"type": "waveform", "height": 0.1, "bottom": 0.02},
+            "spectrum": {
+                "type": "spectrum",
+                "bottom": 0.15,
+                "spectrum": {"n_fft": 512, "bands": 16},
+            },
+        },
+    }
+    path.write_text(json.dumps(payload))
+    cache = tmp_path / "cache"
+    assert main(["analyze", str(audio), "--config", str(path), "--cache-dir", str(cache)]) == 0
+    manifests = list((cache / "analysis").glob("*.json"))
+
+    def forbidden(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("warm visualizers must bypass decoding, waveform and FFT extraction")
+
+    monkeypatch.setattr("beatbloom.analysis.pipeline.load_audio", forbidden)
+    monkeypatch.setattr("beatbloom.analysis.visualizers.extract_spectrum", forbidden)
+    monkeypatch.setattr("beatbloom.analysis.visualizers.extract_waveform", forbidden)
+    payload["visualizers"]["spectrum"]["tracks"] = [{"stem": "mix", "color": "#00aaff"}]
+    payload["visualizers"]["wave"]["waveform"] = {"window_seconds": 1, "points": 128}
+    path.write_text(json.dumps(payload))
+    output = tmp_path / "visual-preview.mp4"
+    assert (
+        main(
+            [
+                "preview",
+                str(video),
+                "--audio",
+                str(audio),
+                "--config",
+                str(path),
+                "--cache-dir",
+                str(cache),
+                "--start",
+                "0.2",
+                "--duration",
+                "0.4",
+                "--size",
+                "80x60",
+                "--fps",
+                "30000/1001",
+                "--no-play",
+                "-o",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    info = probe_video(output)
+    assert (info.width, info.height, info.fps) == (80, 60, Fraction(30000, 1001))
+    assert list((cache / "analysis").glob("*.json")) == manifests
+
+
+def test_visualizer_missing_source_fails_before_any_analysis(
+    media_files: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    video, audio = media_files
+    config = ProjectConfig.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "visualizers": {
+                    "external": {
+                        "type": "waveform",
+                        "tracks": [{"source": str(tmp_path / "missing.wav")}],
+                    }
+                },
+            }
+        )
+    )
+
+    def forbidden(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("all visualizer inputs must be checked before analysis")
+
+    monkeypatch.setattr("beatbloom.render.engine.analyze", forbidden)
+    with pytest.raises(BeatBloomError, match="missing.wav"):
+        render_video(RenderOptions(video, audio, tmp_path / "bad.mp4"), config=config)
+
+
+def test_interrupt_in_visualizer_preserves_existing_output(
+    media_files: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    video, audio = media_files
+    output = tmp_path / "visual-interrupted.mp4"
+    output.write_bytes(b"keep")
+    config = ProjectConfig.model_validate_json(
+        '{"schema_version":2,"visualizers":{"wave":{"type":"waveform"}}}'
+    )
+
+    def interrupt(*_args: object, **_kwargs: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("beatbloom.render.engine.apply_visualizers", interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        render_video(
+            RenderOptions(video, audio, output, duration=0.5, overwrite=True), config=config
+        )
+    assert output.read_bytes() == b"keep"
+    assert not list(tmp_path.glob(".visual-interrupted-*.mp4"))

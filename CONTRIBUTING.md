@@ -22,6 +22,7 @@ Run `make build` when changing packaging.
 
 - Keep analysis, mapping and rendering separate. Avoid new extraction work
   inside the video frame loop.
+- Keep FFT extraction outside the frame loop and bound its temporary memory.
 - Keep cache keys independent of visual mappings, FPS and excerpts.
 - Preserve full-track normalization when adding excerpt or preview support.
 - Validate public configuration changes and document compatibility.
@@ -38,6 +39,8 @@ To inspect coverage: `uv run pytest --cov=beatbloom --cov-report=term-missing`.
 
 Update dependencies in `pyproject.toml`, run `make lock`, then commit `uv.lock`.
 Check with `uv sync --locked --extra plot --dev` to verify reproducibility.
+Generate demo media locally with `uv run python examples/make_demo.py demo`;
+keep generated assets and caches outside commits.
 Keep the generated schema in sync with `ProjectConfig.model_json_schema()`.
 
 ## Pull requests and releases
