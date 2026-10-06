@@ -39,6 +39,10 @@ def test_effect_changes_and_renaming_reuse_signals_without_decoding(
     changed = analyze(renamed, project(amount=8.0), cache_dir=tmp_path / "cache")
     assert changed.signal_hits == 1 and changed.feature_hits == 0
     assert first.manifest == changed.manifest
+    manifest = json.loads(changed.manifest.read_text())
+    restored = ProjectConfig.model_validate_json(json.dumps(manifest["config"]))
+    assert restored == project(amount=8.0)
+    assert "effects" not in manifest["parameters"]
     np.testing.assert_array_equal(first.signals["energy"].values, changed.signals["energy"].values)
 
 
@@ -90,6 +94,7 @@ def test_native_timestamps_and_full_track_normalization(track, tmp_path: Path) -
     assert signal.at(2.0) == 0
     manifest = json.loads(result.manifest.read_text())
     assert manifest["audio_duration"] == 2.0
+    assert manifest["config"] == project().model_dump(mode="json")
     assert "effects" not in manifest["parameters"]
 
 

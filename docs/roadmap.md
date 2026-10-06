@@ -35,6 +35,10 @@
 
 ## 0.4 — creative workflow
 
+- [x] Offline editor preparation: generated contract, standalone HTML, synthetic still preview
+- [x] English editor, local media drops, video still selection and preparation config import
+- [ ] Refine the editor with real project fixtures and more usable preset controls
+- [ ] Export cached analysis snapshots from Python for a media-grounded offline preview
 - [ ] Dedicated `.cube` LUT option and safe filter-path handling
 - [ ] `grade-preview` without re-encoding
 - [ ] Presets, masks and blending

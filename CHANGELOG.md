@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- Preparatory standalone HTML editor with schema-driven controls, synthetic
+  still-frame Canvas preview, simulated signal levels and JSON import/export.
+- English interface, local image/video drag-and-drop at native dimensions,
+  paused video frame selection and a project link in the footer.
+- Drop a config and media together, or restore the full settings from a preparation
+  manifest. Analysis manifests now include the latest configuration without changing
+  cache identities; old manifests can be refreshed by running `analyze` again.
+- Deterministic generation from Python schema/defaults/effect constants and
+  CI checks for contract freshness, validation fixtures and Python-valid exports.
+- Offline editor design and maintenance guide; optional DOM/Canvas and
+  `file://` browser integration checks. No new runtime dependency or schema change.
+
 ## 0.3.0 — 2026-10-06
 
 ### Added

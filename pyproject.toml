@@ -68,7 +68,7 @@ packages = ["src/beatbloom"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "/src", "/tests", "/examples", "/docs", "/.github",
+  "/src", "/tests", "/examples", "/docs", "/.github", "/editor", "/tools",
   "/pyproject.toml", "/uv.lock", "/Makefile", "/.pre-commit-config.yaml",
   "/README.md", "/LICENSE", "/CHANGELOG.md", "/CONTRIBUTING.md", "/SECURITY.md",
 ]

@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>BeatBloom — settings workshop</title>
+  <style>:root { color-scheme: dark; --bg: #0d1016; --panel: #141821; --line: #272d3a; --text: #e8ebf4; --muted: #929cac; --accent: #b7e9ab; --mint: #71d8ba; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+button, input, select, textarea { font: inherit; }
+button, .button { cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; background: #202632; color: var(--text); text-align: center; }
+button:hover, .button:hover { filter: brightness(1.15); }
+button:disabled { cursor: default; opacity: .4; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.primary { background: var(--accent); color: #142215; border-color: var(--accent); font-weight: 650; }
+.secondary { background: transparent; }
+.topbar { min-height: 86px; display: flex; align-items: center; gap: 28px; padding: 18px 30px; border-bottom: 1px solid var(--line); }
+.brand { font-size: 22px; font-weight: 650; display: flex; align-items: center; gap: 11px; letter-spacing: -.6px; }
+.brandmark { font-size: 37px; font-weight: 400; color: var(--accent); line-height: 1; }
+.brand small { display: block; font-size: 9px; font-weight: 500; letter-spacing: 2px; color: var(--muted); }
+.badge { font-size: 9px; font-weight: 650; letter-spacing: 1.2px; color: var(--mint); border: 1px solid #315547; border-radius: 30px; padding: 6px 9px; }
+.actions { display: flex; gap: 10px; margin-left: auto; }
+main { display: grid; grid-template-columns: 395px minmax(0, 1fr); max-width: 1660px; margin: auto; }
+.settings { border-right: 1px solid var(--line); min-height: calc(100vh - 86px); }
+.section-heading { padding: 26px 26px 16px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 24px; letter-spacing: -.8px; margin: 5px 0 8px; font-weight: 550; }
+h2 { font-size: 21px; letter-spacing: -.4px; font-weight: 550; }
+h3 { font-size: 16px; font-weight: 550; margin: 4px 0 12px; }
+.section-heading > p:last-child, .muted { color: var(--muted); }
+.eyebrow { color: var(--muted); font-size: 9px; font-weight: 650; letter-spacing: 2px; }
+.tabs { display: flex; padding: 0 18px; gap: 3px; border-bottom: 1px solid var(--line); }
+.tabs button { padding: 13px 9px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); font-size: 12px; }
+.tabs button[aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+#controls { padding: 22px; min-height: 370px; max-height: calc(100vh - 325px); overflow-y: auto; }
+.group { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; overflow: hidden; background: var(--panel); }
+.group > summary { padding: 14px; font-weight: 600; cursor: pointer; list-style-position: inside; }
+.group > summary .kind { color: var(--muted); float: right; font-size: 11px; font-weight: 400; }
+.fields { padding: 0 14px 14px; }
+.field { display: block; padding-top: 12px; min-width: 0; }
+.field-title { display: flex; justify-content: space-between; color: #bfc7d6; font-size: 12px; margin-bottom: 6px; }
+.field-title output { color: var(--accent); font-variant-numeric: tabular-nums; }
+input:not([type=range]):not([type=checkbox]):not([type=color]), select { width: 100%; border: 1px solid #343c4c; border-radius: 5px; background: #0f131b; color: var(--text); padding: 7px 9px; min-width: 0; }
+.number-row { display: grid; grid-template-columns: 1fr 77px; gap: 12px; align-items: center; }
+input[type=range] { width: 100%; accent-color: var(--accent); height: 20px; margin: 0; cursor: pointer; }
+input[type=checkbox] { accent-color: var(--accent); }
+input[type=color] { width: 100%; height: 34px; padding: 3px; border: 1px solid #343c4c; background: #0f131b; border-radius: 5px; }
+.nullable { display: flex; gap: 6px; align-items: center; margin-top: 7px; color: var(--muted); font-size: 11px; }
+.hint { color: var(--muted); font-size: 10px; padding-top: 4px; }
+.advanced { border-top: 1px solid var(--line); margin-top: 15px; padding-top: 12px; }
+.advanced > summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.row-actions { display: flex; gap: 7px; margin-top: 15px; }
+.row-actions button, .add { font-size: 12px; padding: 7px 10px; }
+.danger { color: #eda9a9; }
+.track { border-left: 2px solid #3b5060; padding: 0 10px 10px; margin: 14px 0; background: #10151d; border-radius: 0 4px 4px 0; }
+.track strong { display: block; font-size: 11px; color: var(--muted); padding-top: 8px; }
+.empty { color: var(--muted); padding: 20px 0; }
+.panel-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 22px 25px; }
+.panel-footer button { font-size: 10px; padding: 8px 10px; }
+#version { font-size: 9px; color: var(--muted); }
+.workspace { padding: 28px 32px; min-width: 0; }
+.preview-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.live-dot { color: var(--muted); font-size: 11px; }
+.live-dot:before { content: ""; display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; margin-right: 7px; }
+.preview-card { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #080b11; }
+canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: 65vh; object-fit: contain; }
+.preview-stage { position: relative; display: flex; align-items: center; justify-content: center; min-height: 180px; }
+.drop-overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; background: #101b17df; border: 2px dashed var(--accent); pointer-events: none; }
+.drop-overlay strong { font-size: 21px; color: var(--accent); }
+.drop-overlay span { font-size: 12px; color: #cad8cd; }
+.is-dragging .drop-overlay { display: flex; }
+.media-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.media-actions .button, .media-actions button { padding: 7px 10px; font-size: 11px; }
+.media-actions > span { color: var(--muted); font-size: 11px; }
+.video-controls { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; margin-top: 14px; font-size: 11px; color: var(--muted); }
+.video-controls input { min-width: 0; }
+.video-controls output { color: var(--accent); font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+.media-decoder { position: absolute; width: 1px; height: 1px; left: -9999px; pointer-events: none; }
+.site-footer { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; max-width: 1660px; margin: auto; border-top: 1px solid var(--line); padding: 18px 30px; font-size: 11px; color: var(--muted); }
+.site-footer a { color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
+.site-footer a:hover { text-decoration: underline; }
+.preview-foot { display: flex; justify-content: space-between; gap: 12px; padding: 13px 17px; font-size: 9px; letter-spacing: 1.5px; color: var(--muted); }
+#media-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#media-size { flex-shrink: 0; }
+.preview-note { color: var(--muted); font-size: 11px; margin: 13px 1px 25px; }
+.workspace-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.levels-card, .export-card { border: 1px solid var(--line); border-radius: 9px; background: var(--panel); padding: 20px; min-width: 0; }
+.levels-card p.muted, .export-card p.muted { font-size: 11px; }
+#status { padding: 8px 0 12px; color: var(--mint); font-size: 12px; }
+#status.invalid { color: #eda9a9; }
+#errors { color: #eda9a9; font-size: 11px; padding-left: 17px; margin-top: 0; word-break: break-word; }
+.export-card details { margin-top: 18px; }
+.export-card summary { color: var(--accent); cursor: pointer; font-size: 11px; }
+textarea { width: 100%; height: 225px; resize: vertical; background: #0b0f16; color: #aab9cf; border: 1px solid var(--line); border-radius: 5px; padding: 10px; margin-top: 10px; font: 10px/1.6 ui-monospace, monospace; }
+.message { margin-top: 16px; color: var(--accent); font-size: 12px; overflow-wrap: anywhere; }
+@media (max-width: 1050px) { main { grid-template-columns: 350px minmax(0, 1fr); } .workspace { padding: 26px 20px; } .workspace-bottom { grid-template-columns: 1fr; } .badge { display: none; } }
+@media (max-width: 720px) { .topbar { padding: 16px; gap: 12px; flex-wrap: wrap; } .brand { font-size: 20px; } .actions { gap: 6px; } .actions button, .actions .button { font-size: 11px; padding: 8px; } main { display: flex; flex-direction: column-reverse; } .settings { min-height: 0; border-right: 0; border-top: 1px solid var(--line); } #controls { max-height: none; } .workspace { padding: 20px 16px; } .workspace-bottom { grid-template-columns: 1fr; } .preview-heading { margin-bottom: 12px; } }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brandmark" aria-hidden="true">✳</span><div>BeatBloom<small>SETTINGS WORKSHOP</small></div></div>
+    <span class="badge">OFFLINE <span aria-hidden="true">·</span> PROTOTYPE</span>
+    <div class="actions"><label class="button secondary" for="import-file">Import config</label><input id="import-file" type="file" accept=".json,application/json" hidden><button id="export" class="primary">Export JSON <span aria-hidden="true">↗</span></button></div>
+  </header>
+  <main>
+    <section class="settings" aria-label="Project settings">
+      <div class="section-heading"><p class="eyebrow">THE PROJECT</p><h1>Compose your look.</h1><p>Place visualizers and tune the effects.</p></div>
+      <nav class="tabs" aria-label="Settings sections"><button data-tab="visualizers" aria-pressed="true">Visualizers</button><button data-tab="effects" aria-pressed="false">Effects</button><button data-tab="signals" aria-pressed="false">Signals</button><button data-tab="separation" aria-pressed="false">Model</button></nav>
+      <div id="controls"></div>
+      <div class="panel-footer"><button id="reset" class="secondary">Reset example</button><span id="version"></span></div>
+    </section>
+    <section class="workspace" aria-label="Preview and export">
+      <div class="preview-heading"><div><p class="eyebrow">THE FRAME</p><h2>Still preview</h2></div><span id="media-kind" class="live-dot">Synthetic image</span></div>
+      <div id="drop-zone" class="preview-card" aria-label="Drop an image, video or configuration JSON">
+        <div class="preview-stage"><canvas id="preview" width="960" height="540" aria-label="Effects and visualizers preview"></canvas><div class="drop-overlay" aria-hidden="true"><strong>Drop your files here</strong><span>Image, video or configuration JSON</span></div></div>
+        <div class="preview-foot"><span id="media-name">01 / NIGHT SCENE</span><span id="media-size">960 × 540 · STILL FRAME</span></div>
+      </div>
+      <div class="media-actions"><label class="button secondary" for="media-file">Choose image or video</label><input id="media-file" type="file" accept="image/*,video/*" hidden><span>or drop media + config anywhere</span><button id="reset-media" class="secondary" hidden>Reset media</button></div>
+      <div id="video-controls" class="video-controls" hidden><label for="video-time">Video frame</label><input id="video-time" type="range" min="0" max="0" step="0.04" value="0"><output id="video-position" for="video-time">0:00</output></div>
+      <p class="preview-note">Preview effects on your own still frame. Audio shapes and signal levels remain simulated; audio analysis settings are applied by Python.</p>
+      <div class="workspace-bottom">
+        <section class="levels-card"><p class="eyebrow">SIMULATION</p><h3>Signal intensity</h3><p class="muted">Try a quiet or loud passage.<br>These values are not exported.</p><div id="levels"></div></section>
+        <section class="export-card"><p class="eyebrow">CONFIGURATION</p><h3>Ready for Python</h3><div id="status" role="status" aria-live="polite"></div><ul id="errors" hidden></ul><p class="muted">Drop a config or preparation JSON to restore the project. Audio paths are resolved relative to the exported JSON.</p><details><summary>View JSON</summary><textarea id="json" readonly aria-label="Configuration JSON" spellcheck="false"></textarea></details></section>
+      </div>
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <footer class="site-footer"><span>BeatBloom · MIT license</span><a href="https://github.com/odoucet/beatbloom" target="_blank" rel="noopener noreferrer">github.com/odoucet/beatbloom ↗</a></footer>
+  <script id="beatbloom-contract" type="application/json">{"beatbloomVersion":"0.3.0","editorVersion":"0.2-prep","schemaHash":"259cc5171f9916eaa6633ecb0fad06a2d6903754c51fa2b309a610fb3dd2ce45","schema":{"$defs":{"EffectConfig":{"additionalProperties":false,"description":"Map a named signal to an additive effect or a multiplicative brightness range.","properties":{"signal":{"minLength":1,"title":"Signal","type":"string"},"effect":{"enum":["bloom","exposure","saturation","zoom","brightness"],"title":"Effect","type":"string"},"amount":{"anyOf":[{"minimum":0,"type":"number"},{"type":"null"}],"default":null,"title":"Amount"},"range":{"anyOf":[{"maxItems":2,"minItems":2,"prefixItems":[{"minimum":0,"type":"number"},{"minimum":0,"type":"number"}],"type":"array"},{"type":"null"}],"default":null,"title":"Range"}},"required":["signal","effect"],"title":"EffectConfig","type":"object"},"SeparationConfig":{"additionalProperties":false,"description":"Options that affect the identity of cached Demucs output.","properties":{"backend":{"const":"demucs","default":"demucs","title":"Backend","type":"string"},"model":{"default":"htdemucs_6s","enum":["htdemucs_6s","htdemucs"],"title":"Model","type":"string"},"device":{"default":"auto","pattern":"^(auto|cpu|mps|cuda(:[0-9]+)?)$","title":"Device","type":"string"},"shifts":{"default":1,"minimum":0,"title":"Shifts","type":"integer"},"overlap":{"default":0.25,"exclusiveMaximum":1,"minimum":0,"title":"Overlap","type":"number"},"segment":{"anyOf":[{"exclusiveMinimum":0,"maximum":7,"type":"integer"},{"type":"null"}],"default":null,"title":"Segment"},"jobs":{"default":0,"minimum":0,"title":"Jobs","type":"integer"},"seed":{"default":0,"maximum":4294967295,"minimum":0,"title":"Seed","type":"integer"}},"title":"SeparationConfig","type":"object"},"SignalConfig":{"additionalProperties":false,"description":"One source and its analysis/envelope parameters, independent of video FPS.","properties":{"stem":{"anyOf":[{"enum":["mix","drums","bass","vocals","other","guitar","piano"],"type":"string"},{"type":"null"}],"default":null,"title":"Stem"},"source":{"anyOf":[{"minLength":1,"type":"string"},{"type":"null"}],"default":null,"title":"Source"},"low":{"anyOf":[{"exclusiveMaximum":22050.0,"minimum":0,"type":"number"},{"type":"null"}],"default":null,"title":"Low"},"high":{"anyOf":[{"exclusiveMinimum":0,"maximum":22050.0,"type":"number"},{"type":"null"}],"default":null,"title":"High"},"feature":{"default":"onset","enum":["onset","rms","loudness"],"title":"Feature","type":"string"},"attack_ms":{"default":10.0,"minimum":0,"title":"Attack Ms","type":"number"},"release_ms":{"default":400.0,"minimum":0,"title":"Release Ms","type":"number"},"gate":{"default":0.0,"exclusiveMaximum":1,"minimum":0,"title":"Gate","type":"number"},"gamma":{"default":1.0,"exclusiveMinimum":0,"title":"Gamma","type":"number"},"ref_percentile":{"anyOf":[{"exclusiveMinimum":0,"maximum":100,"type":"number"},{"type":"null"}],"default":null,"title":"Ref Percentile"},"floor_percentile":{"default":5.0,"exclusiveMaximum":100,"minimum":0,"title":"Floor Percentile","type":"number"}},"title":"SignalConfig","type":"object"},"SpectrumConfig":{"additionalProperties":false,"description":"Log-frequency STFT bands and independent normalized envelopes.","properties":{"n_fft":{"default":4096,"maximum":16384,"minimum":256,"title":"N Fft","type":"integer"},"bands":{"default":64,"maximum":256,"minimum":8,"title":"Bands","type":"integer"},"low":{"default":30.0,"exclusiveMaximum":22050.0,"exclusiveMinimum":0,"title":"Low","type":"number"},"high":{"default":16000.0,"exclusiveMinimum":0,"maximum":22050.0,"title":"High","type":"number"},"floor_db":{"default":-60.0,"exclusiveMaximum":0,"minimum":-120,"title":"Floor Db","type":"number"},"ref_percentile":{"default":99.5,"exclusiveMinimum":0,"maximum":100,"title":"Ref Percentile","type":"number"},"gamma":{"default":1.0,"exclusiveMinimum":0,"title":"Gamma","type":"number"},"attack_ms":{"default":15.0,"minimum":0,"title":"Attack Ms","type":"number"},"release_ms":{"default":180.0,"minimum":0,"title":"Release Ms","type":"number"}},"title":"SpectrumConfig","type":"object"},"VisualizerConfig":{"additionalProperties":false,"description":"A bottom overlay containing one or more independently colored sources.","properties":{"type":{"enum":["waveform","spectrum"],"title":"Type","type":"string"},"tracks":{"default":[{"stem":"mix","source":null,"color":"#65d4ff"}],"items":{"$ref":"#/$defs/VisualizerTrackConfig"},"maxItems":16,"minItems":1,"title":"Tracks","type":"array"},"layout":{"default":"overlay","enum":["overlay","stacked","side_by_side"],"title":"Layout","type":"string"},"left":{"default":0.05,"maximum":1,"minimum":0,"title":"Left","type":"number"},"width":{"default":0.9,"exclusiveMinimum":0,"maximum":1,"title":"Width","type":"number"},"height":{"default":0.18,"exclusiveMinimum":0,"maximum":1,"title":"Height","type":"number"},"bottom":{"default":0.03,"maximum":1,"minimum":0,"title":"Bottom","type":"number"},"gap":{"default":0.025,"exclusiveMaximum":0.5,"minimum":0,"title":"Gap","type":"number"},"opacity":{"default":0.9,"maximum":1,"minimum":0,"title":"Opacity","type":"number"},"gain":{"default":1.0,"minimum":0,"title":"Gain","type":"number"},"background":{"default":"#050812","pattern":"^#[0-9a-fA-F]{6}$","title":"Background","type":"string"},"background_opacity":{"default":0.25,"maximum":1,"minimum":0,"title":"Background Opacity","type":"number"},"line_width":{"default":2,"maximum":8,"minimum":1,"title":"Line Width","type":"integer"},"fill_opacity":{"default":0.18,"maximum":1,"minimum":0,"title":"Fill Opacity","type":"number"},"bar_gap":{"default":0.2,"exclusiveMaximum":1,"minimum":0,"title":"Bar Gap","type":"number"},"waveform":{"$ref":"#/$defs/WaveformConfig"},"spectrum":{"$ref":"#/$defs/SpectrumConfig"}},"required":["type"],"title":"VisualizerConfig","type":"object"},"VisualizerTrackConfig":{"additionalProperties":false,"properties":{"stem":{"anyOf":[{"enum":["mix","drums","bass","vocals","other","guitar","piano"],"type":"string"},{"type":"null"}],"default":null,"title":"Stem"},"source":{"anyOf":[{"minLength":1,"type":"string"},{"type":"null"}],"default":null,"title":"Source"},"color":{"default":"#65d4ff","pattern":"^#[0-9a-fA-F]{6}$","title":"Color","type":"string"}},"title":"VisualizerTrackConfig","type":"object"},"WaveformConfig":{"additionalProperties":false,"description":"Full-track peak normalization; window and points are display settings.","properties":{"window_seconds":{"default":4.0,"maximum":30,"minimum":0.05,"title":"Window Seconds","type":"number"},"points":{"default":512,"maximum":4096,"minimum":2,"title":"Points","type":"integer"},"ref_percentile":{"default":99.5,"exclusiveMinimum":0,"maximum":100,"title":"Ref Percentile","type":"number"},"show_playhead":{"default":true,"title":"Show Playhead","type":"boolean"}},"title":"WaveformConfig","type":"object"}},"additionalProperties":false,"description":"Only schema v2 is accepted; legacy bands JSON has been removed.","properties":{"schema_version":{"const":2,"title":"Schema Version","type":"integer"},"signals":{"additionalProperties":{"$ref":"#/$defs/SignalConfig"},"title":"Signals","type":"object"},"effects":{"default":[],"items":{"$ref":"#/$defs/EffectConfig"},"title":"Effects","type":"array"},"separation":{"$ref":"#/$defs/SeparationConfig"},"visualizers":{"additionalProperties":{"$ref":"#/$defs/VisualizerConfig"},"title":"Visualizers","type":"object"}},"required":["schema_version"],"title":"ProjectConfig","type":"object"},"templates":{"SignalConfig":{"stem":"mix","source":null,"low":null,"high":null,"feature":"onset","attack_ms":10.0,"release_ms":400.0,"gate":0.0,"gamma":1.0,"ref_percentile":null,"floor_percentile":5.0},"SeparationConfig":{"backend":"demucs","model":"htdemucs_6s","device":"auto","shifts":1,"overlap":0.25,"segment":null,"jobs":0,"seed":0},"VisualizerTrackConfig":{"stem":"mix","source":null,"color":"#65d4ff"},"WaveformConfig":{"window_seconds":4.0,"points":512,"ref_percentile":99.5,"show_playhead":true},"SpectrumConfig":{"n_fft":4096,"bands":64,"low":30.0,"high":16000.0,"floor_db":-60.0,"ref_percentile":99.5,"gamma":1.0,"attack_ms":15.0,"release_ms":180.0},"VisualizerConfig":{"type":"waveform","tracks":[{"stem":"mix","source":null,"color":"#65d4ff"}],"layout":"overlay","left":0.05,"width":0.9,"height":0.18,"bottom":0.03,"gap":0.025,"opacity":0.9,"gain":1.0,"background":"#050812","background_opacity":0.25,"line_width":2,"fill_opacity":0.18,"bar_gap":0.2,"waveform":{"window_seconds":4.0,"points":512,"ref_percentile":99.5,"show_playhead":true},"spectrum":{"n_fft":4096,"bands":64,"low":30.0,"high":16000.0,"floor_db":-60.0,"ref_percentile":99.5,"gamma":1.0,"attack_ms":15.0,"release_ms":180.0}}},"effects":{"brightness":{"signal":"global_volume","effect":"brightness","amount":null,"range":[0.6,1.05]},"bloom":{"signal":"piano_onsets","effect":"bloom","amount":1.2,"range":null},"exposure":{"signal":"piano_onsets","effect":"exposure","amount":0.1,"range":null},"saturation":{"signal":"piano_onsets","effect":"saturation","amount":0.15,"range":null},"zoom":{"signal":"piano_onsets","effect":"zoom","amount":0.02,"range":null}},"initialProject":{"schema_version":2,"signals":{"global_volume":{"stem":null,"source":null,"low":null,"high":null,"feature":"loudness","attack_ms":400.0,"release_ms":2000.0,"gate":0.0,"gamma":1.0,"ref_percentile":null,"floor_percentile":5.0},"piano_onsets":{"stem":null,"source":null,"low":400.0,"high":2000.0,"feature":"onset","attack_ms":10.0,"release_ms":250.0,"gate":0.35,"gamma":2.0,"ref_percentile":null,"floor_percentile":5.0}},"effects":[{"signal":"global_volume","effect":"brightness","amount":null,"range":[0.6,1.05]},{"signal":"piano_onsets","effect":"bloom","amount":1.2,"range":null},{"signal":"piano_onsets","effect":"exposure","amount":0.1,"range":null},{"signal":"piano_onsets","effect":"saturation","amount":0.15,"range":null}],"separation":{"backend":"demucs","model":"htdemucs_6s","device":"auto","shifts":1,"overlap":0.25,"segment":null,"jobs":0,"seed":0},"visualizers":{"waveform":{"type":"waveform","tracks":[{"stem":"mix","source":null,"color":"#65d4ff"}],"layout":"overlay","left":0.05,"width":0.9,"height":0.1,"bottom":0.03,"gap":0.025,"opacity":0.9,"gain":1.0,"background":"#050812","background_opacity":0.25,"line_width":2,"fill_opacity":0.18,"bar_gap":0.2,"waveform":{"window_seconds":4.0,"points":512,"ref_percentile":99.5,"show_playhead":true},"spectrum":{"n_fft":4096,"bands":64,"low":30.0,"high":16000.0,"floor_db":-60.0,"ref_percentile":99.5,"gamma":1.0,"attack_ms":15.0,"release_ms":180.0}},"spectrum":{"type":"spectrum","tracks":[{"stem":"mix","source":null,"color":"#ffa76a"}],"layout":"overlay","left":0.05,"width":0.9,"height":0.18,"bottom":0.16,"gap":0.025,"opacity":0.9,"gain":1.0,"background":"#050812","background_opacity":0.25,"line_width":2,"fill_opacity":0.18,"bar_gap":0.2,"waveform":{"window_seconds":4.0,"points":512,"ref_percentile":99.5,"show_playhead":true},"spectrum":{"n_fft":4096,"bands":64,"low":30.0,"high":16000.0,"floor_db":-60.0,"ref_percentile":99.5,"gamma":1.0,"attack_ms":15.0,"release_ms":180.0}}}},"availableStems":{"htdemucs":["mix","drums","bass","vocals","other"],"htdemucs_6s":["mix","drums","bass","vocals","other","guitar","piano"]},"fftSizes":[256,512,1024,2048,4096,8192,16384],"referencePercentiles":{"onset":99.5,"rms":99.5,"loudness":99.0},"nyquist":22050.0,"whitespace":"\t\n\u000b\f\r\u001c\u001d\u001e\u001f              \u2028\u2029  　","preview":{"width":960,"height":540,"timestamp":8,"bloomThreshold":0.55,"bloomSigma":18.0,"luma":[0.2125999927520752,0.7152000069618225,0.0722000002861023]}}</script>
+  <script>/* Pure configuration logic. Also loaded by Node contract tests; no browser APIs. */
+(function (root) {
+  "use strict";
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+  const put = (value, key, item) => Object.defineProperty(value, key, {
+    value: item, writable: true, enumerable: true, configurable: true
+  });
+
+  function create(contract) {
+    const definitions = contract.schema.$defs;
+    const blank = text => !text || [...text].every(char => contract.whitespace.includes(char));
+    const resolve = node => node.$ref ? definitions[node.$ref.split("/").pop()] : node;
+    const nonnull = node => node.anyOf ? node.anyOf.find(item => item.type !== "null") : node;
+    function projectFrom(value) {
+      if (value && typeof value === "object" && own(value, "config")) return value.config;
+      if (value && own(value, "key") && own(value, "parameters") && own(value, "signals")) {
+        throw new Error("This older analysis manifest has no config. Run analyze again or drop the original config JSON.");
+      }
+      return value;
+    }
+    function hydrate(node, value) {
+      const ref = node.$ref && node.$ref.split("/").pop();
+      node = resolve(node);
+      if (value === undefined) {
+        if (own(node, "default")) value = clone(node.default);
+        else if (ref && contract.templates[ref]) value = clone(contract.templates[ref]);
+        else if (node.type === "object") value = {};
+        else if (node.type === "array") value = [];
+        else return undefined;
+      }
+      if (value === null) return null;
+      if (node.anyOf) return hydrate(nonnull(node), value);
+      if (node.type === "object" && typeof value === "object" && !Array.isArray(value)) {
+        const result = clone(value);
+        for (const [key, child] of Object.entries(node.properties || {})) {
+          const item = hydrate(child, own(value, key) ? value[key] : undefined);
+          if (item !== undefined) put(result, key, item);
+        }
+        if (node.additionalProperties && typeof node.additionalProperties === "object") {
+          for (const key of Object.keys(result)) put(result, key, hydrate(node.additionalProperties, result[key]));
+        }
+        return result;
+      }
+      if (node.type === "array" && Array.isArray(value)) {
+        return value.map((item, index) => hydrate((node.prefixItems || [])[index] || node.items || {}, item));
+      }
+      return value;
+    }
+
+    function schemaErrors(node, value, path = "$", errors = []) {
+      node = resolve(node);
+      const fail = text => errors.push(`${path}: ${text}`);
+      if (node.anyOf) {
+        if (!node.anyOf.some(branch => schemaErrors(branch, value, path, []).length === 0)) fail("incompatible value");
+        return errors;
+      }
+      if (own(node, "const") && value !== node.const) fail(`expected value: ${node.const}`);
+      if (node.enum && !node.enum.includes(value)) fail("unknown choice");
+      switch (node.type) {
+        case "null": if (value !== null) fail("expected null"); break;
+        case "boolean": if (typeof value !== "boolean") fail("expected a boolean"); break;
+        case "number":
+        case "integer":
+          if (typeof value !== "number" || !Number.isFinite(value) || (node.type === "integer" && !Number.isInteger(value))) {
+            fail("expected a valid number"); break;
+          }
+          if (own(node, "minimum") && value < node.minimum) fail(`minimum ${node.minimum}`);
+          if (own(node, "maximum") && value > node.maximum) fail(`maximum ${node.maximum}`);
+          if (own(node, "exclusiveMinimum") && value <= node.exclusiveMinimum) fail(`must be > ${node.exclusiveMinimum}`);
+          if (own(node, "exclusiveMaximum") && value >= node.exclusiveMaximum) fail(`must be < ${node.exclusiveMaximum}`);
+          break;
+        case "string":
+          if (typeof value !== "string") { fail("expected text"); break; }
+          if (own(node, "minLength") && [...value].length < node.minLength) fail("text is too short");
+          if (node.pattern) {
+            // Pydantic's Rust regex uses a strict end anchor; JS $ accepts a final newline.
+            const pattern = node.pattern.endsWith("$") ? node.pattern.slice(0, -1) + "(?![\\s\\S])" : node.pattern;
+            if (!new RegExp(pattern).test(value)) fail("invalid format");
+          }
+          break;
+        case "array":
+          if (!Array.isArray(value)) { fail("expected a list"); break; }
+          if (own(node, "minItems") && value.length < node.minItems) fail("list is too short");
+          if (own(node, "maxItems") && value.length > node.maxItems) fail("list is too long");
+          value.forEach((item, index) => schemaErrors((node.prefixItems || [])[index] || node.items || {}, item, `${path}[${index}]`, errors));
+          break;
+        case "object":
+          if (!value || typeof value !== "object" || Array.isArray(value)) { fail("expected an object"); break; }
+          for (const key of node.required || []) if (!own(value, key)) fail(`missing field: ${key}`);
+          for (const [key, item] of Object.entries(value)) {
+            if (own(node.properties || {}, key)) schemaErrors(node.properties[key], item, `${path}.${key}`, errors);
+            else if (node.additionalProperties === false) fail(`unknown field: ${key}`);
+            else if (typeof node.additionalProperties === "object") schemaErrors(node.additionalProperties, item, `${path}.${key}`, errors);
+          }
+          break;
+      }
+      return errors;
+    }
+
+    function validate(project) {
+      const errors = schemaErrors(contract.schema, project);
+      if (errors.length) return errors;
+      const p = hydrate(contract.schema, project);
+      const fail = (path, text) => errors.push(`${path}: ${text}`);
+      if (!Object.keys(p.signals).length && !Object.keys(p.visualizers).length) fail("$", "add a signal or visualizer");
+      const stems = contract.availableStems[p.separation.model];
+      function source(item, path) {
+        if (item.source !== null && item.stem !== null) fail(path, "choose a file OR a stem");
+        if (item.source !== null && blank(item.source)) fail(path, "empty source path");
+        if (item.stem !== null && !stems.includes(item.stem)) fail(path, "stem unavailable with this model");
+      }
+      for (const [name, item] of Object.entries(p.signals)) {
+        const path = `signals.${name}`;
+        if (blank(name)) fail(path, "empty name");
+        source(item, path);
+        if ((item.low ?? 0) >= (item.high ?? contract.nyquist)) fail(path, "low frequency must be below high frequency");
+        const reference = item.ref_percentile ?? contract.referencePercentiles[item.feature];
+        if (item.feature === "loudness" && item.floor_percentile >= reference) fail(path, "floor percentile must be below reference percentile");
+      }
+      p.effects.forEach((item, index) => {
+        const path = `effects[${index}]`;
+        if (!own(p.signals, item.signal)) fail(path, "signal not found");
+        if (item.effect === "brightness" ? item.range === null || item.amount !== null : item.amount === null || item.range !== null) fail(path, "incompatible effect parameters");
+      });
+      for (const [name, item] of Object.entries(p.visualizers)) {
+        const path = `visualizers.${name}`;
+        if (blank(name)) fail(path, "empty name");
+        if (item.left + item.width > 1 + 1e-12 || item.bottom + item.height > 1 + 1e-12) fail(path, "the region must fit inside the frame");
+        if (item.spectrum.low >= item.spectrum.high) fail(path, "low frequency must be below high frequency");
+        if (!contract.fftSizes.includes(item.spectrum.n_fft)) fail(path, "FFT size must be a power of two");
+        item.tracks.forEach((track, index) => source(track, `${path}.tracks[${index}]`));
+      }
+      return errors;
+    }
+
+    function exportProject(project) {
+      const errors = validate(project);
+      if (errors.length) throw new Error(errors.join("\n"));
+      return JSON.stringify(project, null, 2) + "\n";
+    }
+
+    function effectParameters(project, levels) {
+      const result = { bloom: 0, exposure: 0, saturation: 0, zoom: 0, brightness: 1 };
+      project.effects.forEach(item => {
+        const raw = levels[item.signal] ?? 0.65;
+        const value = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 0;
+        if (item.effect === "brightness") result.brightness *= item.range[0] + (item.range[1] - item.range[0]) * value;
+        else result[item.effect] += value * item.amount;
+      });
+      return result;
+    }
+    return { hydrate: value => hydrate(contract.schema, value), validate, exportProject, effectParameters, resolve, nonnull, projectFrom };
+  }
+  root.BeatBloomCore = { create, clone, own, put };
+  if (typeof module !== "undefined" && module.exports) module.exports = root.BeatBloomCore;
+})(typeof globalThis === "undefined" ? this : globalThis);
+</script>
+  <script>/* Illustrative Canvas renderer. This is not an audio analyzer or the OpenCV renderer. */
+(function (root) {
+  "use strict";
+  const clamp = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
+  const canvas = (width, height) => { const item = document.createElement("canvas"); item.width = width; item.height = height; return item; };
+
+  function scene(width, height) {
+    const image = canvas(width, height), ctx = image.getContext("2d");
+    const sky = ctx.createLinearGradient(0, 0, 0, height);
+    sky.addColorStop(0, "#080e22"); sky.addColorStop(.6, "#26213d"); sky.addColorStop(1, "#080e16");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height);
+    const halo = ctx.createRadialGradient(width * .59, height * .35, 1, width * .59, height * .35, width * .49);
+    halo.addColorStop(0, "#735253"); halo.addColorStop(.5, "#362e44aa"); halo.addColorStop(1, "#141c3100");
+    ctx.fillStyle = halo; ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "#080d18";
+    for (let i = 0; i < 22; i++) {
+      const x = i * width / 21, h = height * (.11 + ((i * 37) % 13) / 80);
+      ctx.fillRect(x, height * .62 - h, width / 24, h);
+      ctx.fillStyle = "#ac865a";
+      for (let j = 0; j < 4; j++) ctx.fillRect(x + 7, height * .62 - h + 9 + j * 17, 3, 4);
+      ctx.fillStyle = "#080d18";
+    }
+    const floor = ctx.createLinearGradient(0, height * .59, 0, height);
+    floor.addColorStop(0, "#182b39"); floor.addColorStop(1, "#070b10");
+    ctx.fillStyle = floor; ctx.fillRect(0, height * .62, width, height);
+    ctx.strokeStyle = "#3e4661"; ctx.lineWidth = 1;
+    for (let i = -8; i <= 8; i++) {
+      ctx.beginPath(); ctx.moveTo(width * .56, height * .62); ctx.lineTo(width * .56 + i * width / 7, height); ctx.stroke();
+    }
+    for (let i = 0; i < 6; i++) { const y = height * (.63 + i * i * .012); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
+    ctx.fillStyle = "#0d1420"; ctx.fillRect(width * .3, height * .29, width * .49, height * .33);
+    ctx.strokeStyle = "#ffa973"; ctx.lineWidth = 3;
+    ctx.strokeRect(width * .33, height * .32, width * .43, height * .27);
+    ctx.strokeStyle = "#6edecf"; ctx.lineWidth = 2;
+    ctx.strokeRect(width * .35, height * .35, width * .39, height * .22);
+    ctx.fillStyle = "#e9d9c6"; ctx.textAlign = "center"; ctx.font = `${height * .063}px sans-serif`;
+    ctx.fillText("AFTER HOURS", width * .545, height * .455);
+    ctx.fillStyle = "#79b0b1"; ctx.font = `${height * .018}px sans-serif`;
+    ctx.fillText("S O U N D   /   L I G H T   /   M O T I O N", width * .545, height * .5);
+    for (const [x, color] of [[.16, "#6ce4d4"], [.87, "#ffb277"]]) {
+      ctx.strokeStyle = "#182b3b"; ctx.lineWidth = 8;
+      ctx.beginPath(); ctx.moveTo(width * x, height * .2); ctx.lineTo(width * x, height * .65); ctx.stroke();
+      ctx.strokeStyle = color; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(width * x, height * .25); ctx.lineTo(width * x, height * .6); ctx.stroke();
+    }
+    return image;
+  }
+
+  function applyEffects(base, parameters, shared) {
+    const width = base.width, height = base.height, out = canvas(width, height), ctx = out.getContext("2d");
+    const scale = 1 + parameters.zoom;
+    ctx.drawImage(base, (1 - scale) * width / 2, (1 - scale) * height / 2, width * scale, height * scale);
+    const pixels = ctx.getImageData(0, 0, width, height), glow = ctx.createImageData(width, height);
+    const multiplier = parameters.brightness * (1 + parameters.exposure), luma = shared.luma;
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      let red = pixels.data[i] / 255 * multiplier, green = pixels.data[i + 1] / 255 * multiplier, blue = pixels.data[i + 2] / 255 * multiplier;
+      const gray = red * luma[0] + green * luma[1] + blue * luma[2], saturation = 1 + parameters.saturation;
+      red = gray + (red - gray) * saturation; green = gray + (green - gray) * saturation; blue = gray + (blue - gray) * saturation;
+      const luminance = red * luma[0] + green * luma[1] + blue * luma[2];
+      const mask = clamp((luminance - shared.bloomThreshold) / (1 - shared.bloomThreshold));
+      pixels.data[i] = clamp(red) * 255; pixels.data[i + 1] = clamp(green) * 255; pixels.data[i + 2] = clamp(blue) * 255;
+      glow.data[i] = clamp(red * mask) * 255; glow.data[i + 1] = clamp(green * mask) * 255; glow.data[i + 2] = clamp(blue * mask) * 255;
+      glow.data[i + 3] = 255;
+    }
+    ctx.putImageData(pixels, 0, 0);
+    if (parameters.bloom > .0001) {
+      const light = canvas(width, height), lightCtx = light.getContext("2d");
+      lightCtx.putImageData(glow, 0, 0);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = clamp(parameters.bloom);
+      ctx.filter = `blur(${shared.bloomSigma}px)`; ctx.drawImage(light, 0, 0);
+      ctx.filter = "none"; ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+    }
+    return out;
+  }
+
+  function drawTrack(ctx, track, item, x, y, width, height, index, timestamp) {
+    if (width <= 0 || height <= 0) return;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, width, height); ctx.clip(); ctx.translate(x, y);
+    const identity = track.stem || track.source || "drive";
+    const phase = [...identity].reduce((sum, char) => sum + char.charCodeAt(0), index * 17) / 19;
+    ctx.strokeStyle = track.color; ctx.fillStyle = track.color;
+    if (item.type === "waveform") {
+      const count = Math.min(item.waveform.points, Math.max(2, width)), upper = [], lower = [];
+      for (let i = 0; i < count; i++) {
+        const t = timestamp + (i / (count - 1) - .5) * item.waveform.window_seconds;
+        const amplitude = clamp((.18 + .42 * Math.abs(Math.sin(t * 3.1 + phase)) ** 7 + .17 * Math.abs(Math.cos(t * 17 + phase))) * item.gain);
+        const px = i / (count - 1) * (width - 1);
+        upper.push([px, (1 - amplitude) * (height - 1) / 2]);
+        lower.push([px, (1 + amplitude * (.85 + .15 * Math.cos(t * 5))) * (height - 1) / 2]);
+      }
+      const path = points => { ctx.beginPath(); points.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); };
+      if (item.fill_opacity) {
+        path([...upper, ...lower.slice().reverse()]); ctx.closePath();
+        ctx.globalAlpha = item.opacity * item.fill_opacity; ctx.fill();
+      }
+      ctx.globalAlpha = item.opacity; ctx.lineWidth = item.line_width;
+      for (const points of [upper, lower]) { path(points); ctx.stroke(); }
+      if (item.waveform.show_playhead) {
+        ctx.globalAlpha = item.opacity * .35; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo((width - 1) / 2, 0); ctx.lineTo((width - 1) / 2, height); ctx.stroke();
+      }
+    } else {
+      const count = Math.min(item.spectrum.bands, Math.max(1, width));
+      ctx.globalAlpha = item.opacity;
+      for (let i = 0; i < count; i++) {
+        const f = i / count;
+        const value = clamp((.14 + .56 * Math.exp(-f * 1.5) * Math.abs(Math.sin(f * 14 + phase)) + .15 * Math.abs(Math.sin(f * 89))) * item.gain);
+        const slot = width / count, drawing = Math.max(1, slot * (1 - item.bar_gap));
+        ctx.fillRect(i * slot + (slot - drawing) / 2, height * (1 - value), drawing, height * value);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawVisualizers(ctx, definitions, shared) {
+    const width = ctx.canvas.width, height = ctx.canvas.height;
+    for (const item of Object.values(definitions)) {
+      const x = Math.round(item.left * width), y = height - Math.round((item.bottom + item.height) * height);
+      const w = Math.round((item.left + item.width) * width) - x, h = height - Math.round(item.bottom * height) - y;
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+      ctx.fillStyle = item.background; ctx.globalAlpha = item.opacity * item.background_opacity; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
+      const count = item.tracks.length, vertical = item.layout === "stacked", length = vertical ? h : w;
+      const gap = Math.min(Math.round(item.gap * length), Math.max(0, Math.floor((length - count) / Math.max(1, count - 1))));
+      const usable = Math.max(0, length - gap * (count - 1));
+      item.tracks.forEach((track, index) => {
+        const begin = Math.floor(index * usable / count) + index * gap, end = Math.floor((index + 1) * usable / count) + index * gap;
+        if (item.layout === "overlay") drawTrack(ctx, track, item, x, y, w, h, index, shared.timestamp);
+        else if (vertical) drawTrack(ctx, track, item, x, y + begin, w, end - begin, index, shared.timestamp);
+        else drawTrack(ctx, track, item, x + begin, y, end - begin, h, index, shared.timestamp);
+      });
+      ctx.restore();
+    }
+  }
+
+  function create(target, contract, core) {
+    const shared = {...contract.preview};
+    let base, scale = 1;
+    function setSource(source, width, height, timestamp = contract.preview.timestamp) {
+      if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) throw new Error("Media dimensions are unavailable.");
+      if (width > 16384 || height > 16384 || width * height > 32 * 1024 * 1024) throw new Error("Media exceeds the preview limit of 32 megapixels or 16,384 pixels per edge.");
+      scale = Math.min(1, 1280 / Math.max(width, height));
+      const next = canvas(Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale)));
+      next.getContext("2d").drawImage(source, 0, 0, next.width, next.height);
+      base = next;
+      target.width = width; target.height = height; target.style.aspectRatio = `${width} / ${height}`;
+      shared.timestamp = timestamp;
+    }
+    const reset = () => setSource(scene(shared.width, shared.height), shared.width, shared.height);
+    const render = (project, levels) => {
+      const ctx = target.getContext("2d");
+      ctx.clearRect(0, 0, target.width, target.height);
+      ctx.drawImage(applyEffects(base, core.effectParameters(project, levels), {...shared, bloomSigma: shared.bloomSigma * scale}), 0, 0, target.width, target.height);
+      drawVisualizers(ctx, project.visualizers, shared);
+    };
+    render.setSource = setSource; render.reset = reset; reset(); return render;
+  }
+  root.BeatBloomPreview = { create };
+})(globalThis);
+</script>
+  <script>/* Local-file decoding only. Object URLs are released when replaced or reset. */
+(function (root) {
+  "use strict";
+  function kindOf(file) {
+    const type = (file.type || "").toLowerCase(), name = (file.name || "").toLowerCase();
+    if (type === "application/json" || name.endsWith(".json")) return "config";
+    if (type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|svg|avif|ico)$/.test(name)) return "image";
+    if (type.startsWith("video/") || /\.(mp4|m4v|mov|webm|ogv|ogg|mkv|avi)$/.test(name)) return "video";
+    return null;
+  }
+
+  function create(options) {
+    let current = null, candidate = null, generation = 0;
+    const cancelled = () => Object.assign(new Error("Media import cancelled."), {name: "AbortError"});
+    function dispose(entry) {
+      if (!entry || entry.disposed) return;
+      entry.disposed = true;
+      if (entry.cancel) entry.cancel();
+      for (const remove of entry.listeners) remove();
+      if (entry.kind === "video") { entry.element.pause(); entry.element.removeAttribute("src"); entry.element.load(); }
+      else entry.element.removeAttribute("src");
+      entry.element.remove(); URL.revokeObjectURL(entry.url);
+    }
+    function info(entry) {
+      const element = entry.element, video = entry.kind === "video";
+      return {
+        kind: entry.kind, name: entry.name,
+        width: video ? element.videoWidth : element.naturalWidth,
+        height: video ? element.videoHeight : element.naturalHeight,
+        duration: video && Number.isFinite(element.duration) ? element.duration : null,
+        time: video && Number.isFinite(element.currentTime) ? element.currentTime : 0
+      };
+    }
+    function ready(entry) {
+      return new Promise((resolve, reject) => {
+        const event = entry.kind === "video" ? "loadeddata" : "load";
+        const settle = error => {
+          clearTimeout(timer); entry.element.removeEventListener(event, loaded); entry.element.removeEventListener("error", failed);
+          entry.cancel = null; error ? reject(error) : resolve();
+        };
+        const loaded = () => settle();
+        const failed = () => settle(new Error(entry.kind === "video" ? "The browser could not decode this video. Try an H.264 MP4 or WebM file." : "The browser could not decode this image."));
+        const timer = setTimeout(() => settle(new Error("Media loading timed out. Try another file.")), 30000);
+        entry.cancel = () => settle(cancelled());
+        entry.element.addEventListener(event, loaded); entry.element.addEventListener("error", failed);
+        entry.element.src = entry.url;
+        if (entry.kind === "video") entry.element.load();
+      });
+    }
+    async function load(file) {
+      const kind = kindOf(file);
+      if (!["image", "video"].includes(kind)) throw new Error("Choose an image or video file.");
+      const token = ++generation;
+      dispose(candidate); candidate = null;
+      const element = kind === "video" ? document.createElement("video") : new Image();
+      const entry = {kind, name: file.name, element, url: URL.createObjectURL(file), listeners: [], disposed: false, cancel: null};
+      candidate = entry;
+      if (kind === "video") {
+        element.preload = "auto"; element.muted = true; element.playsInline = true; element.className = "media-decoder";
+        element.setAttribute("aria-hidden", "true"); document.body.append(element);
+      }
+      try {
+        await ready(entry);
+        if (token !== generation) { dispose(entry); return null; }
+        const metadata = info(entry);
+        if (!metadata.width || !metadata.height) throw new Error("Media dimensions are unavailable.");
+        options.onFrame(element, metadata);
+        dispose(current); current = entry; candidate = null;
+        if (kind === "video") {
+          const frame = () => {
+            if (current !== entry || entry.disposed) return;
+            try { options.onFrame(element, info(entry)); } catch (error) { if (options.onError) options.onError(error); }
+          };
+          const failed = () => { if (options.onError) options.onError(new Error("The browser could not decode this video frame.")); };
+          for (const event of ["seeked", "resize", "durationchange"]) { element.addEventListener(event, frame); entry.listeners.push(() => element.removeEventListener(event, frame)); }
+          element.addEventListener("error", failed); entry.listeners.push(() => element.removeEventListener("error", failed));
+        }
+        return metadata;
+      } catch (error) {
+        dispose(entry);
+        if (candidate === entry) candidate = null;
+        if (error.name === "AbortError" || token !== generation) return null;
+        throw error;
+      }
+    }
+    function seek(value) {
+      if (!current || current.kind !== "video") return;
+      const duration = current.element.duration;
+      if (!Number.isFinite(value) || !Number.isFinite(duration) || duration <= 0) return;
+      const time = Math.max(0, Math.min(Math.max(0, duration - .001), value));
+      if (Math.abs(current.element.currentTime - time) < 1e-8) options.onFrame(current.element, info(current));
+      else current.element.currentTime = time;
+    }
+    function cancelPending() { generation++; dispose(candidate); candidate = null; }
+    function reset() { cancelPending(); dispose(current); current = null; }
+    return {load, seek, cancelPending, reset, info: () => current ? info(current) : null};
+  }
+  root.BeatBloomMedia = {create, kindOf};
+})(globalThis);
+</script>
+  <script>(function () {
+  "use strict";
+  const contract = JSON.parse(document.getElementById("beatbloom-contract").textContent);
+  const core = BeatBloomCore.create(contract), { clone, own, put } = BeatBloomCore;
+  const $ = id => document.getElementById(id);
+  const element = (tag, text, className) => {
+    const item = document.createElement(tag);
+    if (text !== undefined) item.textContent = text;
+    if (className) item.className = className;
+    return item;
+  };
+  const button = (text, action, className = "secondary") => {
+    const item = element("button", text, className); item.type = "button"; item.addEventListener("click", action); return item;
+  };
+  const names = {
+    stem: "Stem", source: "Audio file", feature: "Feature", low: "Low frequency", high: "High frequency",
+    attack_ms: "Attack", release_ms: "Release", gate: "Gate", gamma: "Gamma curve",
+    ref_percentile: "Reference percentile", floor_percentile: "Floor percentile",
+    signal: "Signal", effect: "Effect", amount: "Amount", range: "Brightness range",
+    type: "Type", layout: "Layout", left: "Left margin", width: "Width", height: "Height", bottom: "Bottom margin",
+    gap: "Track gap", opacity: "Opacity", gain: "Gain", background: "Background", background_opacity: "Background opacity",
+    color: "Color", line_width: "Line width", fill_opacity: "Fill opacity", bar_gap: "Bar gap",
+    window_seconds: "Visible window", points: "Points", show_playhead: "Center playhead", n_fft: "FFT size",
+    bands: "Bands", floor_db: "Floor", model: "Model", device: "Device", backend: "Backend",
+    shifts: "Shifts", overlap: "Overlap", segment: "Segment", jobs: "CPU workers", seed: "Seed"
+  };
+  const choices = {
+    waveform: "Waveform", spectrum: "Spectrum", overlay: "Overlay", stacked: "Stacked", side_by_side: "Side by side",
+    onset: "Onsets", rms: "RMS energy", loudness: "Loudness", mix: "Full mix", drums: "Drums", bass: "Bass",
+    vocals: "Vocals", other: "Other", guitar: "Guitar", piano: "Piano", bloom: "Bloom", exposure: "Exposure",
+    saturation: "Saturation", zoom: "Zoom", brightness: "Brightness"
+  };
+  const percent = new Set(["left", "width", "height", "bottom", "gap", "opacity", "background_opacity", "fill_opacity", "bar_gap", "gate", "overlap"]);
+  const analysis = new Set(["low", "high", "attack_ms", "release_ms", "gate", "gamma", "ref_percentile", "floor_percentile", "floor_db", "n_fft"]);
+  const recommended = { amount: 2, gain: 3, gamma: 4, attack_ms: 2000, release_ms: 5000, shifts: 10, jobs: 16, seed: 1000 };
+  const initialNumber = { low: 30, high: 16000, ref_percentile: 99.5, segment: 7 };
+  let project = core.hydrate(contract.initialProject), lastValidProject = clone(project), tab = "visualizers", pending = false, importGeneration = 0, dragDepth = 0;
+  const levels = Object.create(null);
+  const draw = BeatBloomPreview.create($("preview"), contract, core);
+  const syntheticInfo = () => ({kind: "synthetic", name: "01 / NIGHT SCENE", width: contract.preview.width, height: contract.preview.height, time: 0, duration: null});
+  let mediaInfo = syntheticInfo();
+  const media = BeatBloomMedia.create({
+    onFrame(source, info) {
+      draw.setSource(source, info.width, info.height, info.kind === "video" ? info.time : contract.preview.timestamp);
+      mediaInfo = info; renderMediaInfo(); refreshPreview();
+    },
+    onError(error) { $("message").textContent = error.message; }
+  });
+
+  function refreshPreview() {
+    if (!pending) {
+      pending = true;
+      requestAnimationFrame(() => { pending = false; draw(core.validate(project).length ? lastValidProject : project, levels); });
+    }
+  }
+
+  function formatTime(value) {
+    if (!Number.isFinite(value)) return "—";
+    const minutes = Math.floor(value / 60), seconds = (value % 60).toFixed(2).padStart(5, "0");
+    return `${minutes}:${seconds}`;
+  }
+
+  function renderMediaInfo() {
+    $("media-kind").textContent = mediaInfo.kind === "synthetic" ? "Synthetic image" : mediaInfo.kind === "video" ? "Video still" : "Your image";
+    $("media-name").textContent = mediaInfo.name; $("media-name").title = mediaInfo.name;
+    $("media-size").textContent = `${mediaInfo.width} × ${mediaInfo.height} · STILL FRAME`;
+    $("reset-media").hidden = mediaInfo.kind === "synthetic";
+    $("video-controls").hidden = mediaInfo.kind !== "video";
+    const duration = mediaInfo.duration;
+    $("video-time").max = Number.isFinite(duration) ? Math.max(0, duration - .001) : 0;
+    $("video-time").value = mediaInfo.time; $("video-time").disabled = !Number.isFinite(duration) || duration <= 0;
+    $("video-position").textContent = `${formatTime(mediaInfo.time)} / ${formatTime(duration)}`;
+  }
+
+  function display(key, value) {
+    if (!Number.isFinite(value)) return "—";
+    if (percent.has(key)) return `${Number((value * 100).toFixed(1))} %`;
+    const unit = key.endsWith("_ms") ? " ms" : key === "window_seconds" ? " s" : ["low", "high"].includes(key) ? " Hz" : key === "floor_db" ? " dB" : "";
+    return `${Number(value.toFixed(4))}${unit}`;
+  }
+
+  function update() {
+    const errors = core.validate(project);
+    $("export").disabled = errors.length > 0;
+    $("status").textContent = errors.length ? "Fix the settings before exporting." : "Configuration valid · schema v2";
+    $("status").classList.toggle("invalid", errors.length > 0);
+    $("errors").replaceChildren(...errors.slice(0, 8).map(text => element("li", text)));
+    $("errors").hidden = errors.length === 0;
+    $("json").value = JSON.stringify(project, null, 2);
+    if (!errors.length) { lastValidProject = clone(project); refreshPreview(); }
+  }
+
+  function numeric(label, key, node, value, path, set) {
+    const field = element("div", undefined, "field");
+    const title = element("div", undefined, "field-title"), output = element("output", display(key, value));
+    title.append(element("span", label), output); field.append(title);
+    const row = element("div", undefined, "number-row"), slider = element("input"), input = element("input");
+    slider.type = "range"; input.type = "number";
+    const step = node.sliderStep ?? (node.type === "integer" ? 1 : percent.has(key) ? .005 : ["low", "high"].includes(key) || key.endsWith("_ms") ? 1 : .01);
+    const minimum = node.minimum ?? (node.exclusiveMinimum !== undefined ? node.exclusiveMinimum + (node.type === "integer" ? 1 : step) : 0);
+    const maximum = node.maximum ?? (node.exclusiveMaximum !== undefined ? node.exclusiveMaximum - step : node.sliderMax ?? recommended[key] ?? Math.max(5, value * 2));
+    slider.min = Math.min(minimum, value); slider.max = Math.max(maximum, value); slider.step = step; slider.value = value;
+    input.step = "any"; input.value = value;
+    if (node.minimum !== undefined) input.min = node.minimum;
+    if (node.maximum !== undefined) input.max = node.maximum;
+    for (const control of [slider, input]) {
+      control.setAttribute("aria-label", `${label} (${path})`); control.dataset.path = path;
+      control.addEventListener("input", () => {
+        const current = control.valueAsNumber;
+        set(current); output.textContent = display(key, current);
+        if (control === slider) input.value = current;
+        else { slider.min = Math.min(minimum, current); slider.max = Math.max(maximum, current); slider.value = current; }
+        update();
+      });
+    }
+    row.append(slider, input); field.append(row); return field;
+  }
+
+  function field(model, key, object, path) {
+    const original = contract.schema.$defs[model].properties[key];
+    const nullable = original.anyOf && original.anyOf.some(node => node.type === "null");
+    const node = core.resolve(core.nonnull(original)), value = object[key];
+    const label = names[key] || key, address = `${path}.${key}`;
+    const set = next => {
+      put(object, key, next);
+      if (key === "stem" && next !== null) object.source = null;
+      if (key === "source" && next !== null) object.stem = null;
+    };
+    let wrapper, control;
+    if (["number", "integer"].includes(node.type) && key !== "n_fft") {
+      const tuning = key === "amount" ? object.effect === "zoom" ? {sliderMax: .05, sliderStep: .0005} : ["exposure", "saturation"].includes(object.effect) ? {sliderMax: .5, sliderStep: .005} : {} : {};
+      wrapper = numeric(label, key, {...node, ...tuning}, value ?? initialNumber[key] ?? 0, address, set);
+    } else {
+      wrapper = element("label", undefined, "field");
+      wrapper.append(element("span", label, "field-title"));
+      if (node.enum || key === "signal" || key === "n_fft") {
+        control = element("select");
+        let options = key === "signal" ? Object.keys(project.signals) : key === "n_fft" ? contract.fftSizes : key === "stem" ? contract.availableStems[project.separation.model] : node.enum;
+        if (nullable) {
+          const automatic = element("option", "Automatic (drive / mix)"); automatic.value = ""; control.append(automatic);
+        }
+        if (value !== null && !options.includes(value)) options = [value, ...options];
+        for (const option of options) { const item = element("option", choices[option] || String(option)); item.value = option; control.append(item); }
+        control.value = value ?? "";
+        control.addEventListener("change", () => {
+          const next = control.value === "" && nullable ? null : key === "n_fft" ? Number(control.value) : control.value;
+          if (key === "effect") {
+            const signal = object.signal, amount = object.amount;
+            Object.assign(object, clone(contract.effects[next]), { signal });
+            if (next !== "brightness" && amount !== null) object.amount = amount;
+          } else set(next);
+          renderControls(); update();
+        });
+      } else if (node.type === "boolean") {
+        control = element("input"); control.type = "checkbox"; control.checked = value;
+        control.addEventListener("change", () => { set(control.checked); update(); });
+      } else if (node.type === "array" && node.prefixItems) {
+        wrapper = element("div", undefined, "field"); wrapper.append(element("span", label, "field-title"));
+        node.prefixItems.forEach((item, index) => wrapper.append(numeric(index ? "Loud" : "Quiet", "range", item, value[index], `${address}[${index}]`, next => { object[key][index] = next; })));
+      } else {
+        control = element("input"); control.type = node.pattern === "^#[0-9a-fA-F]{6}$" ? "color" : "text";
+        control.value = value ?? "";
+        if (key === "source") control.placeholder = "../stems/piano.wav";
+        control.addEventListener("change", () => { set(key === "source" && !control.value ? null : control.value); renderControls(); update(); });
+        if (control.type === "color") control.addEventListener("input", () => { set(control.value); update(); });
+      }
+      if (control) { control.dataset.path = address; control.setAttribute("aria-label", `${label} (${address})`); wrapper.append(control); }
+    }
+    if (nullable && !["stem", "source", "amount", "range"].includes(key)) {
+      const automatic = element("label", undefined, "nullable"), check = element("input");
+      check.type = "checkbox"; check.checked = value === null;
+      check.setAttribute("aria-label", `${label} automatic (${address})`);
+      for (const child of wrapper.querySelectorAll("input,select")) child.disabled = check.checked;
+      check.addEventListener("change", () => { set(check.checked ? null : initialNumber[key] ?? 0); renderControls(); update(); });
+      automatic.append(check, element("span", "Automatic")); wrapper.append(automatic);
+    }
+    if ((["SignalConfig", "SpectrumConfig"].includes(model) && analysis.has(key)) || (model === "WaveformConfig" && key === "ref_percentile")) wrapper.append(element("p", "Audio analysis setting; preview audio remains simulated.", "hint"));
+    return wrapper;
+  }
+
+  function fields(model, object, path, primary) {
+    const container = element("div");
+    const properties = contract.schema.$defs[model].properties;
+    const advanced = element("details", undefined, "advanced"); advanced.append(element("summary", "Advanced settings"));
+    const append = (key, parent) => {
+      if (key === "tracks") { parent.append(tracks(object, path)); return; }
+      if (["waveform", "spectrum"].includes(key)) {
+        if (object.type !== key) return;
+        const section = element("details", undefined, "advanced"); section.open = true;
+        section.append(element("summary", choices[key]));
+        section.append(fields(key === "waveform" ? "WaveformConfig" : "SpectrumConfig", object[key], `${path}.${key}`, key === "waveform" ? ["window_seconds", "points", "show_playhead"] : ["bands"]));
+        parent.append(section); return;
+      }
+      if (model === "EffectConfig" && (key === "amount" && object.effect === "brightness" || key === "range" && object.effect !== "brightness")) return;
+      parent.append(field(model, key, object, path));
+    };
+    for (const key of primary) if (own(properties, key)) append(key, container);
+    for (const key of Object.keys(properties)) if (!primary.includes(key)) append(key, advanced);
+    if (advanced.children.length > 1) container.append(advanced);
+    return container;
+  }
+
+  function tracks(object, path) {
+    const list = element("div", undefined, "advanced"); list.append(element("strong", "Audio tracks"));
+    object.tracks.forEach((track, index) => {
+      const section = element("div", undefined, "track"); section.append(element("strong", `TRACK ${index + 1}`));
+      section.append(fields("VisualizerTrackConfig", track, `${path}.tracks[${index}]`, ["stem", "source", "color"]));
+      const remove = button("Remove track", () => { object.tracks.splice(index, 1); renderControls(); update(); }, "secondary danger");
+      remove.disabled = object.tracks.length <= 1; section.append(remove); list.append(section);
+    });
+    const add = button("＋ Add track", () => {
+      const track = clone(contract.templates.VisualizerTrackConfig);
+      track.color = ["#65d4ff", "#ffa76a", "#bf9af2", "#71d8ba"][object.tracks.length % 4];
+      object.tracks.push(track); renderControls(); update();
+    });
+    add.disabled = object.tracks.length >= contract.schema.$defs.VisualizerConfig.properties.tracks.maxItems;
+    list.append(add); return list;
+  }
+
+  function unique(collection, stem) {
+    let name = stem, index = 2;
+    while (own(collection, name)) name = `${stem}_${index++}`;
+    return name;
+  }
+
+  function rename(collection, oldName, next) {
+    if (next === oldName) return;
+    if (!next.trim() || (next !== oldName && own(collection, next))) { $("message").textContent = "Choose a unique, non-empty name."; renderControls(); return; }
+    const replacement = {};
+    for (const [name, value] of Object.entries(project[collection])) put(replacement, name === oldName ? next : name, value);
+    project[collection] = replacement;
+    if (collection === "signals") {
+      project.effects.forEach(item => { if (item.signal === oldName) item.signal = next; });
+      levels[next] = levels[oldName]; delete levels[oldName]; renderLevels();
+    }
+    renderControls(); update();
+  }
+
+  function renderControls() {
+    const target = $("controls"); target.replaceChildren();
+    if (tab === "separation") {
+      target.append(element("p", "Python runs separation when instrument stems are used.", "hint"));
+      target.append(fields("SeparationConfig", project.separation, "separation", ["model", "device", "shifts", "overlap"])); return;
+    }
+    const entries = tab === "effects" ? project.effects.map((item, index) => [index, item]) : Object.entries(project[tab]);
+    if (!entries.length) target.append(element("p", "No items yet. Add one below.", "empty"));
+    for (const [name, object] of entries) {
+      const group = element("details", undefined, "group"); group.open = entries.length <= 2;
+      const summary = element("summary", tab === "effects" ? choices[object.effect] : name);
+      summary.append(element("span", tab === "visualizers" ? choices[object.type] : tab === "signals" ? choices[object.feature] : object.signal, "kind"));
+      group.append(summary); const body = element("div", undefined, "fields");
+      if (tab !== "effects") {
+        const nameField = element("label", undefined, "field"); nameField.append(element("span", "Name", "field-title"));
+        const input = element("input"); input.value = name; input.setAttribute("aria-label", `Name (${tab}.${name})`);
+        input.addEventListener("change", () => rename(tab, name, input.value)); nameField.append(input); body.append(nameField);
+      }
+      const model = tab === "effects" ? "EffectConfig" : tab === "signals" ? "SignalConfig" : "VisualizerConfig";
+      const path = tab === "effects" ? `effects[${name}]` : `${tab}.${name}`;
+      const primary = tab === "effects" ? ["signal", "effect", "amount", "range"] : tab === "signals" ? ["stem", "source", "feature", "low", "high", "attack_ms", "release_ms", "gate", "gamma"] : ["type", "layout", "left", "width", "height", "bottom", "opacity", "gain", "tracks", object.type];
+      body.append(fields(model, object, path, primary));
+      const actions = element("div", undefined, "row-actions");
+      actions.append(button("Remove", () => {
+        if (tab === "effects") project.effects.splice(name, 1);
+        else {
+          delete project[tab][name];
+          if (tab === "signals") { project.effects = project.effects.filter(item => item.signal !== name); delete levels[name]; renderLevels(); }
+        }
+        renderControls(); update();
+      }, "secondary danger"));
+      body.append(actions); group.append(body); target.append(group);
+    }
+    const additions = element("div", undefined, "row-actions");
+    function add(kind) {
+      if (tab === "visualizers") {
+        const item = clone(contract.templates.VisualizerConfig); item.type = kind;
+        put(project.visualizers, unique(project.visualizers, kind), item);
+      } else if (tab === "signals") {
+        put(project.signals, unique(project.signals, "energy"), clone(contract.templates.SignalConfig)); renderLevels();
+      } else {
+        if (!Object.keys(project.signals).length) { put(project.signals, "energy", clone(contract.templates.SignalConfig)); renderLevels(); }
+        const item = clone(contract.effects.bloom); item.signal = Object.keys(project.signals)[0]; project.effects.push(item);
+      }
+      renderControls(); update();
+    }
+    if (tab === "visualizers") additions.append(button("＋ Waveform", () => add("waveform")), button("＋ Spectrum", () => add("spectrum")));
+    else additions.append(button(tab === "signals" ? "＋ Signal" : "＋ Effect", add));
+    target.append(additions);
+  }
+
+  function renderLevels() {
+    const target = $("levels"); target.replaceChildren();
+    for (const name of Object.keys(project.signals)) {
+      if (!own(levels, name)) levels[name] = project.signals[name].feature === "loudness" ? .65 : .55;
+      target.append(numeric(name, "opacity", { type: "number", minimum: 0, maximum: 1 }, levels[name], `simulation.${name}`, next => { levels[name] = next; }));
+    }
+    if (!Object.keys(project.signals).length) target.append(element("p", "Visualizers use a fixed, synthetic audio shape.", "hint"));
+  }
+
+  function importProject(value) {
+    value = core.projectFrom(value);
+    const errors = core.validate(value);
+    if (errors.length) throw new Error(errors.join("\n"));
+    project = core.hydrate(value);
+    for (const name of Object.keys(levels)) delete levels[name];
+    renderControls(); renderLevels(); update();
+  }
+
+  document.querySelectorAll("[data-tab]").forEach(item => item.addEventListener("click", () => {
+    tab = item.dataset.tab;
+    document.querySelectorAll("[data-tab]").forEach(other => other.setAttribute("aria-pressed", other === item ? "true" : "false"));
+    renderControls();
+  }));
+  async function handleFiles(files) {
+    const request = ++importGeneration;
+    try {
+      files = Array.from(files);
+      if (!files.length) return;
+      media.cancelPending();
+      const configs = files.filter(file => BeatBloomMedia.kindOf(file) === "config"), pictures = files.filter(file => ["image", "video"].includes(BeatBloomMedia.kindOf(file)));
+      if (configs.length + pictures.length !== files.length) throw new Error("Drop an image, video, or JSON configuration file.");
+      if (configs.length > 1 || pictures.length > 1) throw new Error("Drop one media file and one configuration JSON at a time.");
+      let settings;
+      if (configs.length) {
+        const file = configs[0];
+        if (file.size > 1024 * 1024) throw new Error("Configuration JSON exceeds 1 MiB.");
+        settings = core.projectFrom(JSON.parse(await file.text()));
+        const errors = core.validate(settings); if (errors.length) throw new Error(errors.join("\n"));
+      }
+      if (request !== importGeneration) return;
+      if (pictures.length) {
+        $("message").textContent = `Loading ${pictures[0].name}…`;
+        const info = await media.load(pictures[0]);
+        if (!info || request !== importGeneration) return;
+      }
+      if (settings) importProject(settings);
+      $("message").textContent = `${files.map(file => file.name).join(" + ")} imported. Files stay on this device.`;
+    } catch (error) { if (request === importGeneration && error.name !== "AbortError") $("message").textContent = `Import failed: ${error.message}`; }
+  }
+
+  function resetMedia() {
+    importGeneration++; media.reset(); draw.reset(); mediaInfo = syntheticInfo(); renderMediaInfo(); refreshPreview();
+  }
+
+  for (const id of ["import-file", "media-file"]) $(id).addEventListener("change", async event => {
+    await handleFiles(event.target.files); event.target.value = "";
+  });
+  const hasFiles = event => Array.from(event.dataTransfer?.types || []).includes("Files") || event.dataTransfer?.files?.length;
+  document.addEventListener("dragenter", event => { if (hasFiles(event)) { event.preventDefault(); dragDepth++; document.body.classList.add("is-dragging"); } });
+  document.addEventListener("dragover", event => { if (hasFiles(event)) { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; } });
+  document.addEventListener("dragleave", event => { if (hasFiles(event) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("is-dragging"); } });
+  document.addEventListener("drop", event => {
+    if (!hasFiles(event)) return;
+    event.preventDefault(); dragDepth = 0; document.body.classList.remove("is-dragging"); void handleFiles(event.dataTransfer.files);
+  });
+  $("reset-media").addEventListener("click", resetMedia);
+  $("video-time").addEventListener("input", event => media.seek(event.target.valueAsNumber));
+  window.addEventListener("pagehide", () => media.reset());
+  $("export").addEventListener("click", () => {
+    try {
+      const text = core.exportProject(project), blob = new Blob([text], { type: "application/json" });
+      const url = URL.createObjectURL(blob), link = element("a");
+      link.href = url; link.download = "beatbloom.json"; document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000); $("message").textContent = "beatbloom.json exported.";
+    } catch (error) { $("message").textContent = error.message; }
+  });
+  $("reset").addEventListener("click", () => { resetMedia(); importProject(contract.initialProject); $("message").textContent = "Example restored."; });
+  $("version").textContent = `Python ${contract.beatbloomVersion} · editor ${contract.editorVersion}`;
+  globalThis.BeatBloomEditor = { importProject, handleFiles, getProject: () => clone(project), getMediaInfo: () => clone(mediaInfo) };
+  renderControls(); renderLevels(); renderMediaInfo(); update();
+})();
+</script>
+</body>
+</html>

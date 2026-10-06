@@ -22,6 +22,38 @@ Install FFmpeg with your system package manager, for example `apt install ffmpeg
 on Debian/Ubuntu or `brew install ffmpeg` on macOS. On Windows, install an
 FFmpeg build and add its `bin` directory to `PATH`.
 
+## Offline settings editor (preparatory prototype)
+
+Open [editor/beatbloom-editor.html](editor/beatbloom-editor.html) directly in a browser.
+The single file includes its code and configuration contract: no server, installation,
+network request or build step is needed to use it.
+
+Adjust waveform/spectrum tracks, colors, layout, position and effect amounts with sliders.
+The interface is in English. Drop an image or video anywhere to use your own still
+at its native dimensions; videos have a frame selector and remain paused.
+Drop a schema v2 config JSON to restore settings, or drop the analysis preparation
+JSON whose path is printed by the updated `analyze` command. One media file and one
+JSON can be dropped together. File-picker buttons work too.
+
+Export `beatbloom.json` for the Python CLI:
+
+```bash
+uv run beatbloom validate beatbloom.json
+uv run beatbloom preview video.mp4 --audio music.opus --config beatbloom.json
+```
+
+The built-in image and audio shapes are synthetic. Your media stays local and is
+never uploaded. The Canvas preview is illustrative; audio analysis settings do not
+analyze music in the browser. Media selection, video time and simulated signal levels
+are preview controls and are never exported. Existing relative source paths are
+preserved; place the exported JSON where those paths resolve correctly. Older analysis
+manifests lack the full config: rerun `analyze` or import the original config JSON.
+
+This preparation does not change the version or JSON schema. Python models generate
+the defaults, ranges and choices embedded in the HTML; CI checks freshness and
+cross-language validation fixtures. See [the editor design](docs/offline-editor.md)
+for maintenance, scope and the route toward cached real-audio snapshots.
+
 ## Install
 
 ```bash

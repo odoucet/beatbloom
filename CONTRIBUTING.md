@@ -43,6 +43,15 @@ Generate demo media locally with `uv run python examples/make_demo.py demo`;
 keep generated assets and caches outside commits.
 Keep the generated schema in sync with `ProjectConfig.model_json_schema()`.
 
+The offline editor lives in `editor/src/`; do not edit its generated HTML directly.
+After configuration, defaults, effect constants or editor source changes, run
+`make editor` and `make editor-test` (Node 22+), then commit the regenerated file.
+New Pydantic cross-field validators need browser rules and Python-labeled cases
+in `tools/editor_cases.py`. `make editor-test` also checks local media import,
+replacement, cancellation, seeking and URL cleanup using mocked decoder events.
+Optional DOM/Canvas and real-browser checks cover file drops and config restoration.
+See [the editor guide](docs/offline-editor.md).
+
 ## Pull requests and releases
 
 Describe the user-visible change and how it was verified. Add an entry under

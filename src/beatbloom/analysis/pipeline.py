@@ -176,6 +176,7 @@ def analyze(
         {
             "key": bundle_key,
             "parameters": bundle_parameters,
+            "config": config.model_dump(mode="json"),
             "audio_duration": duration,
             "signals": {
                 name: {
