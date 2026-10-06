@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from beatbloom.config import BandConfig
+from beatbloom.config import SignalConfig
 from beatbloom.models import FloatArray
 
 
-def normalize(values: FloatArray, band: BandConfig) -> FloatArray:
+def normalize(values: FloatArray, band: SignalConfig) -> FloatArray:
     """Normalize on the complete track and explicitly leave silence at zero."""
     if len(values) == 0 or float(np.max(values)) <= 1e-9:
         return np.zeros_like(values)
@@ -26,7 +26,7 @@ def normalize(values: FloatArray, band: BandConfig) -> FloatArray:
     return np.asarray(normalized, dtype=np.float32)
 
 
-def smooth(values: FloatArray, band: BandConfig, fps: float) -> FloatArray:
+def smooth(values: FloatArray, band: SignalConfig, fps: float) -> FloatArray:
     """Use separate time constants for rising and falling energy."""
     if len(values) == 0:
         return values.copy()

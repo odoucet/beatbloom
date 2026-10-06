@@ -5,7 +5,7 @@ For larger features, open an issue to discuss the scope before implementing.
 
 ## Set up
 
-Install Python 3.10–3.14, uv and FFmpeg/ffprobe, then:
+Install Python 3.10–3.14, uv and FFmpeg/ffprobe (ffplay for interactive previews), then:
 
 ```bash
 git clone https://github.com/odoucet/beatbloom.git
@@ -22,6 +22,7 @@ Run `make build` when changing packaging.
 
 - Keep analysis, mapping and rendering separate. Avoid new extraction work
   inside the video frame loop.
+- Keep cache keys independent of visual mappings, FPS and excerpts.
 - Preserve full-track normalization when adding excerpt or preview support.
 - Validate public configuration changes and document compatibility.
 - Use type hints and logging; return actionable `BeatBloomError` messages.
@@ -31,10 +32,12 @@ Run `make build` when changing packaging.
 
 To run only fast unit tests: `uv run pytest -m 'not integration'`.
 To run integration tests: `uv run pytest -m integration`.
+Optional backend: `uv run --extra demucs pytest -m demucs_runtime`. This uses
+the official tiny untrained model and never downloads production weights.
 To inspect coverage: `uv run pytest --cov=beatbloom --cov-report=term-missing`.
 
 Update dependencies in `pyproject.toml`, run `make lock`, then commit `uv.lock`.
-Check with `uv sync --locked --all-extras --dev` to verify reproducibility.
+Check with `uv sync --locked --extra plot --dev` to verify reproducibility.
 Keep the generated schema in sync with `ProjectConfig.model_json_schema()`.
 
 ## Pull requests and releases

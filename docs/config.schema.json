@@ -1,13 +1,163 @@
 {
   "$defs": {
-    "BandConfig": {
+    "EffectConfig": {
       "additionalProperties": false,
-      "description": "One audio feature and its visual mappings.",
+      "description": "Map a named signal to an additive effect or a multiplicative brightness range.",
       "properties": {
-        "name": {
+        "signal": {
           "minLength": 1,
-          "title": "Name",
+          "title": "Signal",
           "type": "string"
+        },
+        "effect": {
+          "enum": [
+            "bloom",
+            "exposure",
+            "saturation",
+            "zoom",
+            "brightness"
+          ],
+          "title": "Effect",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "range": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Range"
+        }
+      },
+      "required": [
+        "signal",
+        "effect"
+      ],
+      "title": "EffectConfig",
+      "type": "object"
+    },
+    "SeparationConfig": {
+      "additionalProperties": false,
+      "description": "Options that affect the identity of cached Demucs output.",
+      "properties": {
+        "backend": {
+          "const": "demucs",
+          "default": "demucs",
+          "title": "Backend",
+          "type": "string"
+        },
+        "model": {
+          "default": "htdemucs_6s",
+          "enum": [
+            "htdemucs_6s",
+            "htdemucs"
+          ],
+          "title": "Model",
+          "type": "string"
+        },
+        "device": {
+          "default": "auto",
+          "pattern": "^(auto|cpu|mps|cuda(:[0-9]+)?)$",
+          "title": "Device",
+          "type": "string"
+        },
+        "shifts": {
+          "default": 1,
+          "minimum": 0,
+          "title": "Shifts",
+          "type": "integer"
+        },
+        "overlap": {
+          "default": 0.25,
+          "exclusiveMaximum": 1,
+          "minimum": 0,
+          "title": "Overlap",
+          "type": "number"
+        },
+        "segment": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 7,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Segment"
+        },
+        "jobs": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Jobs",
+          "type": "integer"
+        },
+        "seed": {
+          "default": 0,
+          "maximum": 4294967295,
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "title": "SeparationConfig",
+      "type": "object"
+    },
+    "SignalConfig": {
+      "additionalProperties": false,
+      "description": "One source and its analysis/envelope parameters, independent of video FPS.",
+      "properties": {
+        "stem": {
+          "anyOf": [
+            {
+              "enum": [
+                "mix",
+                "drums",
+                "bass",
+                "vocals",
+                "other",
+                "guitar",
+                "piano"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stem"
         },
         "source": {
           "anyOf": [
@@ -105,76 +255,46 @@
           "minimum": 0,
           "title": "Floor Percentile",
           "type": "number"
-        },
-        "effects": {
-          "additionalProperties": {
-            "minimum": 0,
-            "type": "number"
-          },
-          "propertyNames": {
-            "enum": [
-              "bloom",
-              "exposure",
-              "saturation",
-              "zoom"
-            ]
-          },
-          "title": "Effects",
-          "type": "object"
-        },
-        "brightness": {
-          "anyOf": [
-            {
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "minimum": 0,
-                  "type": "number"
-                },
-                {
-                  "minimum": 0,
-                  "type": "number"
-                }
-              ],
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Brightness"
         }
       },
-      "required": [
-        "name"
-      ],
-      "title": "BandConfig",
+      "title": "SignalConfig",
       "type": "object"
     }
   },
   "additionalProperties": false,
-  "description": "The public JSON configuration format for BeatBloom 0.1.",
+  "description": "Only schema v2 is accepted; legacy bands JSON has been removed.",
   "properties": {
     "schema_version": {
-      "const": 1,
-      "default": 1,
+      "const": 2,
       "title": "Schema Version",
       "type": "integer"
     },
-    "bands": {
-      "items": {
-        "$ref": "#/$defs/BandConfig"
+    "signals": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SignalConfig"
       },
-      "minItems": 1,
-      "title": "Bands",
+      "minProperties": 1,
+      "title": "Signals",
+      "type": "object"
+    },
+    "effects": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/EffectConfig"
+      },
+      "title": "Effects",
       "type": "array"
+    },
+    "separation": {
+      "$ref": "#/$defs/SeparationConfig"
     }
   },
   "required": [
-    "bands"
+    "schema_version",
+    "signals"
   ],
   "title": "ProjectConfig",
-  "type": "object"
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/odoucet/beatbloom/blob/main/docs/config.schema.json"
 }

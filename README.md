@@ -1,27 +1,27 @@
 # BeatBloom
 
-Audio-reactive video effects driven by music analysis.
+Audio-reactive effects for existing videos: bloom, exposure, saturation, zoom
+and brightness driven by music.
 
-BeatBloom post-processes an existing video with bloom, exposure, saturation,
-zoom and brightness driven by frequency bands in your music. Analyze the mix
-or individual instrument stems, then mux the original music into the output.
-
-**Version 0.1.0:** a packaged and tested version of the original prototype.
-Automatic source separation, persistent analysis caching, visualizers and a
-dedicated preview command are planned; see [the roadmap](docs/roadmap.md).
+**Version 0.2.0** separates named audio signals from visual mappings, integrates
+optional Demucs separation and caches stems, raw features and envelopes.
+`analyze`, `preview` and `render` share the same full-track analysis.
+The original music mix is always used in the output.
 
 ## Requirements
 
 - Python 3.10–3.14.
-- FFmpeg and ffprobe on `PATH`, with the `libx264` and AAC encoders.
-- A video and a music file. FFmpeg-supported audio formats such as WAV, MP3,
-  FLAC and Opus can be decoded without additional audio tools.
+- FFmpeg and ffprobe on `PATH`, with H.264 (`libx264`) and AAC encoders.
+- ffplay for previews that open a player. `--no-play -o preview.mp4` works
+  without ffplay or a graphical display.
+- Demucs/PyTorch only when using instrument stems; model weights download
+  on the first separation. A CPU works; CUDA can speed up separation.
 
-Install FFmpeg with your system package manager (for example `apt install ffmpeg`
-on Debian/Ubuntu or `brew install ffmpeg` on macOS). On Windows, install an
+Install FFmpeg with your system package manager, for example `apt install ffmpeg`
+on Debian/Ubuntu or `brew install ffmpeg` on macOS. On Windows, install an
 FFmpeg build and add its `bin` directory to `PATH`.
 
-## Install from this repository
+## Install
 
 ```bash
 git clone https://github.com/odoucet/beatbloom.git
@@ -30,95 +30,139 @@ uv sync --locked --extra plot
 uv run beatbloom --version
 ```
 
-Or install with pip in a virtual environment:
+For automatic stem separation:
 
 ```bash
-python -m pip install "git+https://github.com/odoucet/beatbloom.git"
+uv sync --locked --extra plot --extra demucs
 ```
 
-For plots with pip, clone the repository and run `python -m pip install ".[plot]"`.
-The project is not yet published on PyPI.
-
-## Render
+With pip in a virtual environment, clone the repository and run:
 
 ```bash
-uv run beatbloom render video.mp4 \
-  --audio morceau.opus \
-  --config examples/basic.json \
-  -o final.mp4
+python -m pip install ".[plot]"
+# Optional instrument separation:
+python -m pip install ".[demucs,plot]"
 ```
 
-If no configuration is supplied, BeatBloom uses global brightness and
-onsets in the 400–2000 Hz range to drive bloom, exposure and saturation.
+BeatBloom is not yet published on PyPI. The core installation analyzes mixes
+and existing audio files without installing PyTorch. Use `uv run --extra demucs`
+for commands that need stems.
 
-Analyze a different track while retaining the original mix in the output:
+## Preview and render
 
 ```bash
-uv run beatbloom render video.mp4 --audio morceau.opus \
-  --drive drums.wav --config examples/subtle.json -o final.mp4
+uv run beatbloom preview video.mp4 --audio morceau.opus   --config examples/basic.json --start 60
 ```
 
-Render a short excerpt, resize it and save an analysis plot:
+Preview defaults: 8 seconds, 960×540, 15 FPS, `ultrafast`, CRF 26.
+The video is kept in a temporary directory while ffplay is open, then removed.
+To save it, supply `-o`; to save without opening a player:
 
 ```bash
-uv run --extra plot beatbloom render video.mp4 --audio morceau.opus \
-  --config examples/basic.json --start 60 --duration 8 \
-  --size 960x540 --preset ultrafast --crf 26 \
-  --plot analysis.png -o test.mp4
-ffplay test.mp4
+uv run beatbloom preview video.mp4 --audio morceau.opus   --config examples/basic.json --start 60 --no-play -o preview.mp4
 ```
 
-Analysis and percentile normalization always use each **complete source track**.
-Rendering an excerpt does not normalize that excerpt separately. `--start`
-selects the same absolute position in both the video and the audio; the
-default duration is the remaining common duration of the two inputs.
-
-Use `--grade` for FFmpeg filters applied after the reactive effects:
+A full-quality render uses the input video frame rate, `slow` and CRF 16:
 
 ```bash
-uv run beatbloom render video.mp4 --audio morceau.opus \
-  --grade "curves=preset=increase_contrast,vignette=PI/5" -o graded.mp4
+uv run beatbloom render video.mp4 --audio morceau.opus   --config examples/basic.json -o final.mp4
 ```
 
-Existing outputs are protected. Add `--overwrite` to replace them after a
-successful render. The video is encoded to a temporary file in the output
-directory; failed or interrupted renders remove that file and preserve an
-existing output. A requested plot is saved separately before video encoding.
+If no configuration is supplied, global loudness controls brightness and
+onsets in the 400–2000 Hz range drive bloom, exposure and saturation.
+`--drive drums.wav` changes the default signal source while keeping
+`--audio` as the soundtrack. Explicit `stem: "mix"` always uses the mix.
 
-Output containers: MP4, MOV and MKV, with H.264 video and AAC audio. Video
-input audio is discarded in favor of `--audio`. Output is CFR at the probed
-average frame rate (fractional rates such as 30000/1001 are preserved).
-Input rotation metadata is not applied in v0.1. Dimensions must be even for
-YUV 4:2:0; `--size` center-crops and scales to even dimensions.
+Both commands support `--start`, `--duration`, `--size`, `--fps` (including
+`30000/1001`), `--grade`, `--plot`, `--cache-dir`, `--refresh` and `--overwrite`.
+For example:
 
 ```bash
-uv run beatbloom render --help
+uv run --extra plot beatbloom render video.mp4 --audio morceau.opus   --config examples/subtle.json --start 60 --duration 8   --size 1280x720 --fps 24 --plot analysis.png   --grade "curves=preset=increase_contrast,vignette=PI/5" -o excerpt.mp4
+```
+
+`--start` selects the same absolute position in video and audio. Duration is
+limited to their common remaining duration. Analysis and percentile
+normalization always use the **complete source tracks**, even for previews.
+Native audio timestamps make reactions independent of video FPS.
+
+Existing outputs need `--overwrite`. Encoding completes in a temporary file;
+failed or interrupted renders preserve an existing video. A requested plot
+is saved separately before video encoding. A saved preview remains available
+if the player fails.
+
+Output: MP4, MOV or MKV with H.264 video and AAC audio. Input video audio is
+replaced by `--audio`. Output is CFR; fractional FPS are preserved.
+Rotation metadata is not applied. Dimensions must be even; `--size` scales
+and center-crops to fit.
+
+## Stems and reusable analysis
+
+```bash
+# Prepare all six stems once (or let analyze/render do it automatically):
+uv run --extra demucs beatbloom separate morceau.opus
+
+# Cache only the signals declared in the configuration:
+uv run --extra demucs beatbloom analyze morceau.opus --config examples/demucs.json
+
+# Reuse those signals while adjusting effects and trying excerpts:
+uv run --extra demucs beatbloom preview video.mp4 --audio morceau.opus   --config examples/demucs.json --start 60
+uv run --extra demucs beatbloom render video.mp4 --audio morceau.opus   --config examples/demucs.json -o final.mp4
+```
+
+`examples/demucs.json` uses `stem: "piano"`, `"other"` and `"drums"`.
+The default `htdemucs_6s` model also produces bass, vocals and guitar.
+`htdemucs` produces four stems: drums, bass, vocals and other. Choose a model
+and device in JSON or override them with `--model` and `--device cpu|cuda|mps`.
+Automatic device selection uses CUDA when available, otherwise CPU.
+Piano separation can contain leakage; listen to the stem before tuning effects.
+
+Caches live in the OS user cache directory (`beatbloom`); `--cache-dir .cache/beatbloom`
+selects a project cache. Logs and the analysis manifest show their locations.
+
+- Stem keys include input file content, model, backend versions and separation options.
+- Feature keys include source content, extraction parameters and numerical library versions.
+- Envelope keys include the feature key and normalization/smoothing settings.
+- Effect weights, grading, video, size, FPS and excerpt do not invalidate analysis.
+- Changing gate, gamma or attack/release reuses raw features.
+- Every hit verifies manifests and payload hashes. Invalid entries rebuild.
+- `--refresh` recomputes the required stages; a failed refresh keeps valid old entries.
+
+Cache reads use locks; concurrent processes share completed entries. Cached stems
+can be reused without loading a model; the Demucs extra must still be installed.
+Deleting the cache simply causes recomputation. The cache contains audio stems,
+so choose its location accordingly. Model weights are managed by Demucs separately.
+
+## JSON v2
+
+**Legacy `bands` JSON and schema v1 are no longer supported.**
+Use the updated examples or write `schema_version: 2`, named `signals` and a
+separate `effects` list:
+
+```json
+{
+  "schema_version": 2,
+  "signals": {
+    "kick": {"stem": "drums", "low": 40, "high": 120, "feature": "rms"}
+  },
+  "effects": [
+    {"signal": "kick", "effect": "zoom", "amount": 0.006}
+  ]
+}
+```
+
+Signals can also use `source: "../stems/drums.wav"`; these files must already
+be aligned with the mix. Relative paths resolve against the JSON file.
+Unknown keys, invalid values and undefined signal references are rejected.
+Validation reads no media and downloads no models:
+
+```bash
 uv run beatbloom validate examples/basic.json
-python -m beatbloom --version
+uv run beatbloom preview --help
 ```
 
-## Configuration and existing Demucs stems
-
-The original `{"bands": [...]}` format is supported. Paths in `source` are
-resolved relative to the JSON file, not the current working directory.
-Unknown keys, effects and invalid ranges produce explicit validation errors.
-See [the configuration reference](docs/configuration.md).
-
-For v0.1, run Demucs separately in its own environment:
-
-```bash
-uv venv .venv-demucs --python 3.11
-uv pip install --python .venv-demucs/bin/python demucs
-.venv-demucs/bin/demucs -n htdemucs_6s -o separated morceau.opus
-uv run beatbloom render video.mp4 --audio morceau.opus \
-  --config examples/demucs.json -o final.mp4
-```
-
-On Windows use `.venv-demucs\Scripts\python.exe` and
-`.venv-demucs\Scripts\demucs.exe`. The example expects `morceau.opus` and
-`separated/htdemucs_6s/morceau/{piano,other,drums}.wav` in the repository root;
-edit the paths for a different track name. Demucs, PyTorch and model downloads
-are optional external tools and are not BeatBloom runtime dependencies.
+See [the configuration reference](docs/configuration.md) and
+[the architecture](docs/architecture.md).
 
 ## Development
 
@@ -129,25 +173,23 @@ make build
 uv run pre-commit install
 ```
 
-`make check` runs Ruff formatting/linting, strict mypy and pytest. Integration
-tests generate their own tiny audio/video inputs and perform real FFmpeg
-renders. No copyrighted media or model weights are included. Tests needing
-FFmpeg skip locally when the executables are unavailable; CI installs FFmpeg.
+Without Make: `uv sync --locked --extra plot --dev`, then `uv run ruff format --check .`,
+`uv run ruff check .`, `uv run mypy`, `uv run pytest` and `uv build`.
+`make install-demucs` additionally installs the separation extra.
 
-Windows users without Make can run the equivalent commands:
+Tests use synthetic media, real FFmpeg rendering and a deterministic test backend
+for cache behavior. An optional real Demucs/PyTorch smoke test uses the official
+tiny untrained model, without downloading production weights:
 
 ```bash
-uv sync --locked --all-extras --dev
-uv run ruff format --check .
-uv run ruff check .
-uv run mypy
-uv run pytest
-uv build
+uv run --extra demucs pytest -m demucs_runtime
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [the architecture](docs/architecture.md).
+CI checks core tests on Python 3.10, 3.12 and 3.14, portability, packaging and
+that optional CPU backend. No media or model weights are committed.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [the roadmap](docs/roadmap.md).
 
 ## License
 
-[MIT](LICENSE), copyright Olivier Doucet. Third-party dependencies, music,
-videos and externally downloaded model weights retain their own licenses.
+[MIT](LICENSE), copyright Olivier Doucet. Dependencies, media and downloaded
+model weights retain their own licenses.

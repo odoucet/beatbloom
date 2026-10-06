@@ -14,18 +14,20 @@ LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 
 
 def parameters_at(
-    config: ProjectConfig, signals: tuple[Signal, ...], timestamp: float
+    config: ProjectConfig, signals: dict[str, Signal], timestamp: float
 ) -> EffectParameters:
-    """Add effect weights across bands and multiply brightness mappings."""
+    """Resolve named signals through independent effect mappings."""
     weights = {"bloom": 0.0, "exposure": 0.0, "saturation": 0.0, "zoom": 0.0}
     brightness = 1.0
-    for band, signal in zip(config.bands, signals, strict=True):
-        value = signal.at(timestamp)
-        for effect, amount in band.effects.items():
-            weights[effect] += value * amount
-        if band.brightness is not None:
-            dark, bright = band.brightness
+    for mapping in config.effects:
+        value = signals[mapping.signal].at(timestamp)
+        if mapping.effect == "brightness":
+            assert mapping.range is not None
+            dark, bright = mapping.range
             brightness *= dark + (bright - dark) * value
+        else:
+            assert mapping.amount is not None
+            weights[mapping.effect] += value * mapping.amount
     return EffectParameters(
         bloom=weights["bloom"],
         exposure=weights["exposure"],

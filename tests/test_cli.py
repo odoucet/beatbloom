@@ -13,7 +13,7 @@ def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
         main(["--version"])
     assert exc.value.code == 0
-    assert "0.1.0" in capsys.readouterr().out
+    assert "0.2.0" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(
@@ -27,6 +27,10 @@ def test_version(capsys: pytest.CaptureFixture[str]) -> None:
         ("--size", "bad"),
         ("--crf", "52"),
         ("--crf", "-1"),
+        ("--fps", "0"),
+        ("--fps", "nan"),
+        ("--fps", "30/0"),
+        ("--fps", "-24"),
     ],
 )
 def test_invalid_cli_values(flag: str, value: str) -> None:
@@ -40,16 +44,16 @@ def test_invalid_cli_values(flag: str, value: str) -> None:
 def test_validate_does_not_require_media_files(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    config = tmp_path / "bands.json"
-    config.write_text(json.dumps({"bands": [{"name": "x", "source": "absent.wav"}]}))
+    config = tmp_path / "project.json"
+    config.write_text(json.dumps({"schema_version": 2, "signals": {"x": {"source": "absent.wav"}}}))
     caplog.set_level(logging.INFO)
     assert main(["validate", str(config)]) == 0
     assert "Valid configuration" in caplog.text
 
 
 def test_invalid_config_returns_nonzero(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    config = tmp_path / "bands.json"
-    config.write_text('{"bands":[{"name":"x","gamma":0}]}')
+    config = tmp_path / "project.json"
+    config.write_text('{"schema_version":2,"signals":{"x":{"gamma":0}}}')
     assert main(["validate", str(config)]) == 1
     assert "Invalid configuration" in caplog.text
 

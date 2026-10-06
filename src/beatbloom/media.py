@@ -14,7 +14,7 @@ import numpy as np
 
 from beatbloom.config import SAMPLE_RATE
 from beatbloom.errors import BeatBloomError
-from beatbloom.models import AudioTrack, VideoInfo
+from beatbloom.models import AudioTrack, FloatArray, VideoInfo
 
 
 def require_tools() -> None:
@@ -113,6 +113,69 @@ def load_audio(path: Path) -> AudioTrack:
     if not np.all(np.isfinite(samples)):
         raise BeatBloomError(f"Audio contains non-finite samples: {path}")
     return AudioTrack(samples, SAMPLE_RATE)
+
+
+def load_stereo(path: Path) -> FloatArray:
+    """Decode stereo explicitly for Demucs without depending on its audio codecs."""
+    require_file(path, "Audio source")
+    data = run_command(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-ac",
+            "2",
+            "-ar",
+            str(SAMPLE_RATE),
+            "-f",
+            "f32le",
+            "pipe:1",
+        ]
+    )
+    if not data or len(data) % 8:
+        raise BeatBloomError(f"No valid stereo audio decoded from {path}")
+    samples = np.frombuffer(data, dtype="<f4").reshape(-1, 2).T.copy()
+    if not np.all(np.isfinite(samples)):
+        raise BeatBloomError(f"Audio contains non-finite samples: {path}")
+    return np.asarray(samples, dtype=np.float32)
+
+
+def audio_duration(path: Path) -> float:
+    """Probe the original mix on warm runs instead of decoding it in full again."""
+    require_file(path, "Audio")
+    payload = json.loads(
+        run_command(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "a:0",
+                "-show_entries",
+                "stream=duration:format=duration",
+                "-of",
+                "json",
+                str(path),
+            ]
+        )
+    )
+    streams = payload.get("streams", [])
+    if not streams:
+        raise BeatBloomError(f"No audio stream found in {path}")
+    raw = streams[0].get("duration", payload.get("format", {}).get("duration"))
+    try:
+        duration = float(raw)
+        if not math.isfinite(duration) or duration <= 0:
+            raise ValueError("non-positive audio duration")
+        return duration
+    except (TypeError, ValueError):
+        return load_audio(path).duration
 
 
 def stop_process(process: subprocess.Popen[bytes] | None) -> None:

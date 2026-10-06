@@ -1,9 +1,7 @@
 {
-  "schema_version": 1,
-  "bands": [
-    {
-      "name": "piano_attaques",
-      "source": "../separated/htdemucs_6s/morceau/piano.wav",
+  "schema_version": 2,
+  "signals": {
+    "piano_attaques": {
       "low": 400,
       "high": 2000,
       "feature": "onset",
@@ -11,31 +9,63 @@
       "release_ms": 250,
       "gate": 0.35,
       "gamma": 2.0,
-      "effects": {"bloom": 1.2, "exposure": 0.10, "saturation": 0.15}
+      "stem": "piano"
     },
-    {
-      "name": "melodie_souffle",
-      "source": "../separated/htdemucs_6s/morceau/other.wav",
+    "melodie_souffle": {
       "low": 200,
       "high": 4000,
       "feature": "rms",
       "attack_ms": 120,
       "release_ms": 900,
-      "gate": 0.10,
+      "gate": 0.1,
       "gamma": 1.0,
-      "effects": {"bloom": 0.4, "saturation": 0.10}
+      "stem": "other"
     },
-    {
-      "name": "kick",
-      "source": "../separated/htdemucs_6s/morceau/drums.wav",
+    "kick": {
       "low": 40,
       "high": 120,
       "feature": "rms",
       "attack_ms": 15,
       "release_ms": 200,
-      "gate": 0.30,
+      "gate": 0.3,
       "gamma": 1.5,
-      "effects": {"zoom": 0.006}
+      "stem": "drums"
     }
-  ]
+  },
+  "effects": [
+    {
+      "signal": "piano_attaques",
+      "effect": "bloom",
+      "amount": 1.2
+    },
+    {
+      "signal": "piano_attaques",
+      "effect": "exposure",
+      "amount": 0.1
+    },
+    {
+      "signal": "piano_attaques",
+      "effect": "saturation",
+      "amount": 0.15
+    },
+    {
+      "signal": "melodie_souffle",
+      "effect": "bloom",
+      "amount": 0.4
+    },
+    {
+      "signal": "melodie_souffle",
+      "effect": "saturation",
+      "amount": 0.1
+    },
+    {
+      "signal": "kick",
+      "effect": "zoom",
+      "amount": 0.006
+    }
+  ],
+  "separation": {
+    "model": "htdemucs_6s",
+    "device": "auto"
+  }
 }

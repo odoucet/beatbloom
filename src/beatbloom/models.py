@@ -11,6 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float32]
+TimeArray: TypeAlias = NDArray[np.float64]
 PixelArray: TypeAlias = NDArray[np.uint8]
 
 
@@ -42,18 +43,35 @@ class Signal:
 
     name: str
     values: FloatArray
-    fps: float
+    timestamps: TimeArray
     duration: float
 
     def at(self, timestamp: float) -> float:
         """Interpolate within the track; a finished or not-yet-started track is silent."""
         if timestamp < 0 or timestamp >= self.duration or len(self.values) == 0:
             return 0.0
-        position = timestamp * self.fps
-        left = min(int(position), len(self.values) - 1)
-        right = min(left + 1, len(self.values) - 1)
-        fraction = position - left
-        return float(self.values[left] * (1 - fraction) + self.values[right] * fraction)
+        return float(np.interp(timestamp, self.timestamps, self.values))
+
+
+@dataclass(frozen=True)
+class FeatureSeries:
+    """A native audio feature/envelope series suitable for safe NPZ caching."""
+
+    timestamps: TimeArray
+    values: FloatArray
+    duration: float
+
+
+@dataclass(frozen=True)
+class AnalysisResult:
+    """Signals shared by analyze, preview and render; manifest excludes visual mappings."""
+
+    signals: dict[str, Signal]
+    manifest: Path
+    audio_duration: float
+    signal_hits: int
+    feature_hits: int
+    stems_hit: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -84,6 +102,9 @@ class RenderOptions:
     grade: str | None = None
     plot: Path | None = None
     overwrite: bool = False
+    cache_dir: Path | None = None
+    refresh: bool = False
+    fps: Fraction | None = None
 
 
 @dataclass(frozen=True)

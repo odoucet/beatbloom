@@ -1,23 +1,44 @@
 {
-  "schema_version": 1,
-  "bands": [
-    {
-      "name": "volume_global",
+  "schema_version": 2,
+  "signals": {
+    "volume_global": {
       "feature": "loudness",
       "attack_ms": 400,
-      "release_ms": 2000,
-      "brightness": [0.6, 1.05]
+      "release_ms": 2000
     },
-    {
-      "name": "piano_attaques",
+    "piano_attaques": {
       "low": 400,
       "high": 2000,
       "feature": "onset",
       "attack_ms": 10,
       "release_ms": 250,
       "gate": 0.35,
-      "gamma": 2.0,
-      "effects": {"bloom": 1.2, "exposure": 0.10, "saturation": 0.15}
+      "gamma": 2.0
+    }
+  },
+  "effects": [
+    {
+      "signal": "volume_global",
+      "effect": "brightness",
+      "range": [
+        0.6,
+        1.05
+      ]
+    },
+    {
+      "signal": "piano_attaques",
+      "effect": "bloom",
+      "amount": 1.2
+    },
+    {
+      "signal": "piano_attaques",
+      "effect": "exposure",
+      "amount": 0.1
+    },
+    {
+      "signal": "piano_attaques",
+      "effect": "saturation",
+      "amount": 0.15
     }
   ]
 }
